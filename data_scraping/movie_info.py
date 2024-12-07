@@ -26,7 +26,11 @@ def get_data(movie_id):
     try:
         title = tree.xpath('//*[@id="root"]/div[1]/section/div/div[2]/div/div/div[1]/div[2]/div/h1/text()')[0].replace('/', '')
     except:
-        title = None
+        time.sleep(3)
+        try:
+            title = tree.xpath('//*[@id="root"]/div[1]/section/div/div[2]/div/div/div[1]/div[2]/div/h1/text()')[0].replace('/', '')
+        except: 
+            title = None
     try:
         movie_info = tree.xpath('//*[@id="root"]/div[1]/section/div/div[2]/div/div/div[1]/div[2]/div/div[2]/text()')[0].replace('/', '').split('·')
         year, genre, country = [item.strip() for item in movie_info]
@@ -49,8 +53,8 @@ def get_data(movie_id):
 
     while True:
         try:
-            name = tree.xpath(f'//*[@id="content_credits"]/section/div[1]/ul/li[{i}]/a/div[2]/div[1]/div[1]/text()')[0]
-            role = tree.xpath(f'//*[@id="content_credits"]/section/div[1]/ul/li[{i}]/a/div[2]/div[1]/div[2]/text()')[0]
+            name = tree.xpath(f'//*[@id="content_credits"]/section/div[1]/ul/li[{i}]/a/div[2]/div[1]/div[1]/text()')[0].replace('/', '')
+            role = tree.xpath(f'//*[@id="content_credits"]/section/div[1]/ul/li[{i}]/a/div[2]/div[1]/div[2]/text()')[0].replace('/', '_')
             
             cast_production_info_list.append((name, role))
             i += 1
@@ -81,7 +85,7 @@ if __name__ == "__main__":
     from assets.utils.txt import append_to_txt
     import time
 
-    # print(get_data("m5mYeYx"))
+    # print(get_data("mZ5em95"))
     
     # 지정할 열 이름
     column_names = ["CustomID", "MovieID", "MovieName", "Rating"]
