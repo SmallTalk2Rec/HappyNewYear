@@ -1,0 +1,4 @@
+.env
+*.pyc
+chroma.sqlite3
+*.bin
