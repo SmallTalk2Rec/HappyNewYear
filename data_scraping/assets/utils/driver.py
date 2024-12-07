@@ -1,12 +1,18 @@
+import selenium.webdriver
+from selenium.webdriver.chrome.service import Service
+import selenium.webdriver.remote
+import selenium.webdriver.remote.webelement
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options   
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from typing import Literal
+import selenium
 import time
-from tqdm import tqdm
-import pickle
-    
+
+ 
 def get_driver(use_headless:bool=True, proxy_server:bool=None, chrome_driver_path:str=None) -> webdriver.Chrome:
     chrome_options = Options()
     chrome_options.add_argument('--disable-gpu')  # GPU 비활성화
@@ -35,32 +41,38 @@ def get_driver(use_headless:bool=True, proxy_server:bool=None, chrome_driver_pat
         
     return driver
 
-
-
-def get_movie_url(driver, movie_name:str) -> str:
-    url = f'https://pedia.watcha.com/ko-KR/search?query={movie_name}'
-    driver.get(url)
-    time.sleep(1)
-
-    # 팝업 창 뜨면 없애기
-    try:
-        driver.find_element(By.CLASS_NAME, "hsDVweTz").click()
-    except:
-        pass
-    time.sleep(1)
-
-    # 가장 첫번째 창 클릭
-    driver.find_element(By.XPATH, '//*[@id="root"]/div[1]/section/section/div[2]/div[1]/section/section[2]/div[1]/ul/li[1]/a/div[1]/div[1]').click()
-    time.sleep(1)
-
-    movie_url = driver.current_url
-
-    return movie_url
-
-
 def get_text_by_xpath(driver:webdriver.Chrome, xpath:str):
     try:
         element = driver.find_element(By.XPATH, xpath)
         return element.text
     except:
         return 'None'
+    
+def get_button(driver:webdriver.Chrome, path:str, by:Literal["xpath", "class_name"]):
+    if by == "xpath":
+        try:
+            button = driver.find_element(By.XPATH, path)
+        except:
+            button = "None"
+        return button
+    elif by == "class_name":
+        try:
+            button = driver.find_element(By.CLASS_NAME, path)
+        except:
+            button = "None"
+        return button
+
+
+def open_new_tab(driver:webdriver.Chrome, button:selenium.webdriver.remote.webelement):
+    ActionChains(driver).key_down(Keys.CONTROL).click(button).key_up(Keys.CONTROL).perform()
+
+
+def scroll_to_end(driver:webdriver.Chrome):
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(1)  # AJAX 로드 대기
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:  # 더 이상 로드할 내용이 없음
+            break
+        last_height = new_height
