@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name : fastapi
+    # command: sleep infinity
+    command: python app/main.py
+    volumes:
+      - .:/smalktalk2rec/FastAPI
+    env_file: 
+      - .env
+    ports:
+      - 8080:8080
+    restart: always
