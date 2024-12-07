@@ -1,5 +1,6 @@
 .env
 *.pyc
-chroma.sqlite3
+chroma/
 *.bin
 notebooks/
+*.csv

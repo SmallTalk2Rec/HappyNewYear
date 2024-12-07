@@ -1,8 +1,10 @@
 import json
-from typing import Type, Optional
+from tqdm import tqdm
+from typing import Type, Optional, List
 from dotenv import load_dotenv
 import pandas as pd
 from pydantic import BaseModel, Field
+from langchain_core.documents import Document
 from langchain_core.tools import BaseTool
 from langchain_chroma import Chroma
 from langchain_core.callbacks import (
@@ -19,70 +21,94 @@ from agent.model import llm
 
 load_dotenv()
 
-content_description = "plot and reviews of the movie"
+content_description = "Movie title, genre, director, and writer"
 
 metadata_field_info = [
     AttributeInfo(
-        name="title",
-        description="The title of the movie.",
-        type="string",
+        name="audienceScore",
+        description="Average rating from general audience. range 0 - 100",
+        type="float",
     ),
     AttributeInfo(
-        name="director",
-        description="A list of the movie's directors.",
-        type="list",
-    ),
-    AttributeInfo(
-        name="screenwriter",
-        description="A list of the movie's screenwriters.",
-        type="list",
-    ),
-    AttributeInfo(
-        name="plot",
-        description="A short summary of the movie's plot.",
-        type="string",
+        name="tomatoMeter",
+        description="Average rating from critics. range 0 - 100",
+        type="float",
     ),
     AttributeInfo(
         name="rating",
-        description="The average rating given to the movie. Range 0.0 ~ 5.0",
+        description="Movie age rating (G, PG, PG-13, R, NC-17, TVY7, TVG, TVPG, TV14, TVMA).",
+        type="string",
+    ),
+    AttributeInfo(
+        name="ratingContents",
+        description="Content leading to the rating classification",
+        type="string",
+    ),
+    AttributeInfo(
+        name="releaseDateTheater",
+        description="The date the movie was released in theaters. (e.g. 2021-01-01)",
+        type="string",
+    ),
+    AttributeInfo(
+        name="releaseDateStreaming",
+        description="The date the movie became available for streaming. (e.g. 2021-01-01)",
+        type="string",
+    ),
+    AttributeInfo(
+        name="runtimeMinutes",
+        description="The duration of the movie in minutes",
         type="float",
     ),
     AttributeInfo(
-        name="rating_count",
-        description="The total number of ratings the movie has received.",
-        type="float",
+        name="originalLanguage",
+        description="The original language of the movie",
+        type="string",
     ),
     AttributeInfo(
-        name="actors",
-        description="A list of the movie's main actors.",
-        type="list",
+        name="boxOffice",
+        description="The movie's total box office revenue. (e.g. $1.2M)",
+        type="string",
     ),
     AttributeInfo(
-        name="genres",
-        description="A list of the genres.",
-        type="list",
+        name="distributor",
+        description="The company responsible for distributing the movie",
+        type="string",
     ),
     AttributeInfo(
-        name="countries",
-        description="A list of the countries where the movie was produced.",
-        type="list",
-    ),
-    AttributeInfo(
-        name="audience",
-        description="Cumulative audience",
-        type="float",
-    ),
-    AttributeInfo(
-        name="running_time",
-        description="The running time of the movie in minutes.",
-        type="float",
-    ),
-    AttributeInfo(
-        name="adult",
-        description="A flag indicating whether the movie is for adults only.",
-        type="float",
+        name="soundMix",
+        description="The audio format(s) used in the movie",
+        type="string",
     ),
 ]
+
+
+def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000):
+   total_docs = len(documents)
+   vectorstore = None
+   
+   # tqdm으로 진행률 표시
+   progress_bar = tqdm(
+       range(0, total_docs, batch_size),
+       desc="Creating vector store",
+       total=(total_docs + batch_size - 1) // batch_size
+   )
+   
+   for i in progress_bar:
+       batch = documents[i:min(i + batch_size, total_docs)]
+       progress_bar.set_postfix({"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"})
+       
+       if vectorstore is None:
+           vectorstore = Chroma.from_documents(
+               batch,
+               embeddings,
+               persist_directory="./data/chroma",
+           )
+       else:
+           vectorstore.add_documents(batch)
+   
+   return vectorstore
+
+
 
 class SelfQueryInput(BaseModel):
     query: str = Field(description="The query to search for movies.")
@@ -98,18 +124,29 @@ class SelfQueryTool(BaseTool):
 
     def __init__(self, movie_data_path: str):
         contexts_df = pd.read_csv(movie_data_path)
-        loader = DataFrameLoader(contexts_df, page_content_column="plot_review")
-        vectorstore = Chroma.from_documents(
-            loader.load(),
-            OpenAIEmbeddings(model="text-embedding-3-small"),
-            persist_directory="./data/chroma",
-        )
+        contexts_df['title_genre_director_writer'] = contexts_df['title_genre_director_writer'].fillna('')
+        
+        # 메타데이터 컬럼의 NaN 값 처리
+        metadata_columns = [info.name for info in metadata_field_info]
+        for col in metadata_columns:
+            if col in contexts_df.columns:
+                if contexts_df[col].dtype in ['float64', 'int64']:
+                    contexts_df[col] = contexts_df[col].fillna(0)
+                else:
+                    contexts_df[col] = contexts_df[col].fillna('')
+
+        # Document 생성
+        print("Creating document loader...")
+        loader = DataFrameLoader(contexts_df, page_content_column="title_genre_director_writer")
+        documents = loader.load()
+
+        print("Initializing embeddings...")
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        vectorstore = process_in_batches(documents, embeddings)
+
         super().__init__(movie_retriever=SelfQueryRetriever.from_llm(
             llm, vectorstore, content_description, metadata_field_info
         ))
-        # self.movie_retriever = SelfQueryRetriever.from_llm(
-        #     llm, vectorstore, content_description, metadata_field_info
-        # )
 
     def _run(self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None):
         docs = self.movie_retriever.invoke(query)
