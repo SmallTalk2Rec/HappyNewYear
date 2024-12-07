@@ -89,3 +89,53 @@ def get_movie_info(movie_name, movie_id, watcha_infos, naver_infos, wiki_infos):
     movie_info['language'] = wiki_infos['movie_info'].get('언어', None)
 
     return movie_info
+
+
+
+import re
+
+# 2시간22 -> 144
+def time_to_minutes(time_str: str) -> int:
+    # '시간'과 '분' 앞에 있는 숫자를 추출하는 정규식
+    hours_match = re.search(r'(\d+)시간', time_str)
+    minutes_match = re.search(r'(\d+)분', time_str)
+
+    # 추출한 '시간'과 '분' 값을 int로 변환 (없을 경우 0으로 처리)
+    hours = int(hours_match.group(1)) if hours_match else 0
+    minutes = int(minutes_match.group(1)) if minutes_match else 0
+
+    # 시간을 분으로 변환한 값과 분을 더해줌
+    total_minutes = hours * 60 + minutes
+    
+    return total_minutes
+
+def extract_number(text: str) -> float:
+    # 정규식을 이용해 숫자 부분만 추출
+    match = re.search(r'(\d+\.\d+|\d+)', text)
+    
+    if match:
+        return float(match.group(0))
+    else:
+        return None
+    
+def extract_movie_age(text: str) -> str:
+    if '전체' == text:
+        return '12'
+    else:
+        extract_number(text)
+    
+def separate_cast(cast_list):
+    main_cast = []  # 주연 리스트
+    supporting_cast = []  # 조연 리스트
+
+    for item in cast_list:
+        if '주연' in item:
+            # 주연 항목에서 이름만 추출 (이름은 '\n' 앞에 있음)
+            name = item.split('\n')[0]
+            main_cast.append(name)
+        elif '조연' in item:
+            # 조연 항목에서 이름만 추출 (이름은 '\n' 앞에 있음)
+            name = item.split('\n')[0]
+            supporting_cast.append(name)
+
+    return main_cast, supporting_cast
