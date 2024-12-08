@@ -54,7 +54,7 @@ def get_data(movie_id):
                     break
 
                 if page.locator(comment_xpath).count() > 0:
-                    comment = page.locator(comment_xpath).inner_text().replace('\n', ' ').replace('/', ' ')
+                    comment = page.locator(comment_xpath).inner_text().replace('\n', ' ').replace('/', ' ').replace('\t', ' ').replace('\r', ' ')
                 else:
                     comment = None
 
@@ -82,18 +82,21 @@ def get_data(movie_id):
 # 실행 예시
 if __name__ == "__main__":
     import pandas as pd
-    from assets.utils.txt import append_to_txt
+    from assets.utils.txt import append_to_txt, read_txt
     
-    # 지정할 열 이름
+    row = read_txt('./data/custom_movie_rating.txt')
     column_names = ["CustomID", "MovieID", "MovieName", "Rating"]
+    custom_movie_rating_df = pd.DataFrame(row, columns=column_names)
+    
+    column_names = ["MovieID", "CustomID", "Comment", "Rating", "N_Likes"]
+    row = read_txt("./data/movie_comments.txt")
+    movie_comments_df = pd.DataFrame(row, columns=column_names)
+    
+    movie_ids = list(set(custom_movie_rating_df['MovieID']) - set(movie_comments_df['MovieID']))
 
-    # 데이터 읽기
-    df = pd.read_csv('./data/custom_movie_rating.txt', sep='/', header=None, names=column_names, encoding='utf-8')
-
-    for i, movie_id in enumerate(df['MovieID'].tolist()):
-        print(f"{i} / {df.shape[0]} start", end='\r')  # '\r'로 줄을 덮어씀
+    for i, movie_id in enumerate(movie_ids):
+        print(f"{i} / {len(movie_ids)}", end='\r')  # '\r'로 줄을 덮어씀
         data_list = get_data(movie_id)
-        print(f"{i} / {df.shape[0]} end--", end='\n')  # '\r'로 줄을 덮어씀
         for data in data_list:
             append_to_txt("./data/movie_comments.txt", [movie_id, *data])
         
