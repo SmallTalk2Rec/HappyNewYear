@@ -13,7 +13,7 @@ def get_data(movie_id):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         )
         page = context.new_page()
-        page.goto(movie_url)
+        page.goto(movie_url, timeout=600000)
 
         content = page.content()
         
@@ -84,21 +84,23 @@ if __name__ == "__main__":
     from assets.utils.txt import append_to_txt, read_txt
     import time
 
-    print(get_data("m2djnad"))
+    # print(get_data("m2djnad"))
     
-    # column_names = ["CustomID", "MovieID", "MovieName", "Rating"]
-    # row = read_txt('./data/custom_movie_rating.txt')
-    # custom_movie_rating_df = pd.DataFrame(row, columns=column_names)
+    column_names = ["CustomID", "MovieID", "MovieName", "Rating"]
+    row = read_txt('./data/custom_movie_rating.txt')
+    custom_movie_rating_df = pd.DataFrame(row, columns=column_names)
     
-    # column_names = ["MovieID", "Title", "Year", "Genre", "Country", "Runtime", "Age", "Cast_Production_Info_List", "Synopsis", "Avg_Rating", "N_Rating(만명)","N_Comments"]
-    # row = read_txt('./data/movie_info_watcha.txt')
-    # movie_info = pd.DataFrame(row, columns=column_names)
+    column_names = ["MovieID", "Title", "Year", "Genre", "Country", "Runtime", "Age", "Cast_Production_Info_List", "Synopsis", "Avg_Rating", "N_Rating(만명)","N_Comments"]
+    row = read_txt('./data/movie_info_watcha.txt')
+    movie_info = pd.DataFrame(row, columns=column_names)
     
-    # # 뽑아야하는 movie id값
-    # movie_ids = list(set(custom_movie_rating_df['MovieID']) - set(movie_info.loc[movie_info['Title']!='None', 'MovieID']))
+    # 뽑아야하는 movie id값
+    movie_ids = list(set(custom_movie_rating_df['MovieID']) - set(movie_info.loc[movie_info['Title']!='None', 'MovieID']))
     
-    # for i, movie_id in enumerate(movie_ids):
-    #     print(f"{i} / {len(movie_ids)}", end='\r')  # '\r'로 줄을 덮어씀
-    #     movie_info = get_data(movie_id)
-    #     time.sleep(1)
-    #     append_to_txt("./data/movie_info_watcha.txt", [movie_id, *movie_info])
+    for i, movie_id in enumerate(movie_ids):
+        movie_info = get_data(movie_id)
+        if movie_info[0] != 'None':
+            append_to_txt("./data/movie_info_watcha.txt", [movie_id, *movie_info])
+            print(f"complete {i} / {len(movie_ids)}", end='\r')  # '\r'로 줄을 덮어씀
+
+        time.sleep(2)
