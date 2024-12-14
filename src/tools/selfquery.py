@@ -1,3 +1,4 @@
+import os
 import json
 from tqdm import tqdm
 from typing import Type, Optional, List
@@ -82,31 +83,35 @@ metadata_field_info = [
 ]
 
 
-def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000):
-   total_docs = len(documents)
-   vectorstore = None
+def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000, vectorstore_dir: str = "./data/chroma"):
+    if os.path.exists(vectorstore_dir):
+        vectorstore = Chroma(embedding_function=embeddings, persist_directory=vectorstore_dir)
+        return vectorstore
    
-   # tqdm으로 진행률 표시
-   progress_bar = tqdm(
-       range(0, total_docs, batch_size),
-       desc="Creating vector store",
-       total=(total_docs + batch_size - 1) // batch_size
-   )
-   
-   for i in progress_bar:
-       batch = documents[i:min(i + batch_size, total_docs)]
-       progress_bar.set_postfix({"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"})
-       
-       if vectorstore is None:
-           vectorstore = Chroma.from_documents(
-               batch,
-               embeddings,
-               persist_directory="./data/chroma",
-           )
-       else:
-           vectorstore.add_documents(batch)
-   
-   return vectorstore
+    total_docs = len(documents)
+    vectorstore = None
+
+    # tqdm으로 진행률 표시
+    progress_bar = tqdm(
+        range(0, total_docs, batch_size),
+        desc="Creating vector store",
+        total=(total_docs + batch_size - 1) // batch_size
+    )
+
+    for i in progress_bar:
+        batch = documents[i:min(i + batch_size, total_docs)]
+        progress_bar.set_postfix({"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"})
+        
+        if vectorstore is None:
+            vectorstore = Chroma.from_documents(
+                batch,
+                embeddings,
+                persist_directory=vectorstore_dir,
+            )
+        else:
+            vectorstore.add_documents(batch)
+
+    return vectorstore
 
 
 
@@ -122,8 +127,9 @@ class SelfQueryTool(BaseTool):
 
     movie_retriever: object
 
-    def __init__(self, movie_data_path: str):
+    def __init__(self, movie_data_path: str, vectorstore_dir: str):
         contexts_df = pd.read_csv(movie_data_path)
+        contexts_df = contexts_df.dropna(subset=['title'])
         contexts_df['title_genre_director_writer'] = contexts_df['title_genre_director_writer'].fillna('')
         
         # 메타데이터 컬럼의 NaN 값 처리
@@ -142,7 +148,7 @@ class SelfQueryTool(BaseTool):
 
         print("Initializing embeddings...")
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        vectorstore = process_in_batches(documents, embeddings)
+        vectorstore = process_in_batches(documents, embeddings, batch_size=40000, vectorstore_dir=vectorstore_dir)
 
         super().__init__(movie_retriever=SelfQueryRetriever.from_llm(
             llm, vectorstore, content_description, metadata_field_info
