@@ -6,3 +6,4 @@ pydantic
 datetime
 pytz
 httpx
+requests
