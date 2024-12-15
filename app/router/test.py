@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from starlette.requests import Request
 import httpx
+import requests
 
 
 router = APIRouter()
@@ -16,6 +17,26 @@ ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
 
 @router.post("/callback")
 async def handle_callback(request: Request):
+
+    kakao_url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    # 메시지 템플릿 정의
+    payload = {
+        "template_object": {
+            "object_type": "text",
+            "text": request.message,
+            "link": {
+                "web_url": request.web_url if request.web_url else "https://example.com"
+            },
+        }
+    }
+
+    response = requests.post(kakao_url, headers=headers, json=payload)
+
     data = await request.json()
 
     # 카카오에서 전달받은 데이터 확인
