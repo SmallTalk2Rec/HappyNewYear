@@ -12,75 +12,14 @@ from langchain_core.callbacks import (
     AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
-
-from langchain.chains.query_constructor.base import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain.chains.query_constructor.base import StructuredQueryOutputParser
 from langchain_community.document_loaders import DataFrameLoader
 from langchain_openai import OpenAIEmbeddings
-from agent.model import llm
+from langchain_community.query_constructors.chroma import ChromaTranslator
+from langchain.chains.query_constructor.ir import StructuredQuery
 
 
 load_dotenv()
-
-content_description = "Movie title, genre, director, and writer"
-
-metadata_field_info = [
-    AttributeInfo(
-        name="audienceScore",
-        description="Average rating from general audience. range 0 - 100",
-        type="float",
-    ),
-    AttributeInfo(
-        name="tomatoMeter",
-        description="Average rating from critics. range 0 - 100",
-        type="float",
-    ),
-    AttributeInfo(
-        name="rating",
-        description="Movie age rating (G, PG, PG-13, R, NC-17, TVY7, TVG, TVPG, TV14, TVMA).",
-        type="string",
-    ),
-    AttributeInfo(
-        name="ratingContents",
-        description="Content leading to the rating classification",
-        type="string",
-    ),
-    AttributeInfo(
-        name="releaseDateTheater",
-        description="The date the movie was released in theaters. (e.g. 2021-01-01)",
-        type="string",
-    ),
-    AttributeInfo(
-        name="releaseDateStreaming",
-        description="The date the movie became available for streaming. (e.g. 2021-01-01)",
-        type="string",
-    ),
-    AttributeInfo(
-        name="runtimeMinutes",
-        description="The duration of the movie in minutes",
-        type="float",
-    ),
-    AttributeInfo(
-        name="originalLanguage",
-        description="The original language of the movie",
-        type="string",
-    ),
-    AttributeInfo(
-        name="boxOffice",
-        description="The movie's total box office revenue. (e.g. $1.2M)",
-        type="string",
-    ),
-    AttributeInfo(
-        name="distributor",
-        description="The company responsible for distributing the movie",
-        type="string",
-    ),
-    AttributeInfo(
-        name="soundMix",
-        description="The audio format(s) used in the movie",
-        type="string",
-    ),
-]
 
 
 def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000, vectorstore_dir: str = "./data/chroma"):
@@ -115,26 +54,53 @@ def process_in_batches(documents: List[Document], embeddings, batch_size: int = 
 
 
 
-class SelfQueryInput(BaseModel):
-    query: str = Field(description="The query to search for movies.")
+class MovieRetrieverInput(BaseModel):
+    query: str = Field(
+        description="Text string to search within movie contents (title, genre, director, writer). Should only contain search terms without any filtering conditions."
+    )
+    filter: Optional[str] = Field(
+        description="""Optional logical condition statement for filtering movies. Must use the following format:
+        - Comparison: comp(attr, val) where comp is one of: eq, ne, gt, gte, lt, lte
+        - Logical operations: op(statement1, statement2, ...) where op is one of: and, or
+        - Date format must be YYYY-MM-DD
+        - Use 'NO_FILTER' if no filtering is needed
+        Example: 'and(gt("audienceScore", 80), lt("releaseDateTheater", "2024-01-01"))'"""
+    )
 
 
-class SelfQueryTool(BaseTool):
+class MovieRetrieverTool(BaseTool):
     name: str = "movie_retriever"
-    description: str = "A tool to retrieve movies based on a query."
-    args_schema: Type[BaseModel] = SelfQueryInput
+    description: str = """Tool for searching movie with the following information:
+    - Movie title
+    - Genre
+    - Director
+    - Writer
+    - audienceScore: Average rating from general audience (0-100)
+    - tomatoMeter: Average rating from critics (0-100)
+    - rating: Movie age rating (G, PG, PG-13, R, NC-17, TVY7, TVG, TVPG, TV14, TVMA)
+    - ratingContents: Content leading to the rating classification
+    - releaseDateTheater: Theater release date (YYYY-MM-DD)
+    - releaseDateStreaming: Streaming availability date (YYYY-MM-DD)
+    - runtimeMinutes: Movie duration in minutes
+    - boxOffice: Total box office revenue (e.g. $1.2M)
+    - originalLanguage: Original language of the movie
+    - distributor: Distribution company
+    - soundMix: Audio format(s) used
+
+    Use comparison operators (eq, ne, gt, gte, lt, lte) and logical operators (and, or) for filtering.
+    Returns relevant movie data matching the specified criteria."""
+    args_schema: Type[BaseModel] = MovieRetrieverInput
     return_direct: bool = False
 
-    movie_retriever: object
+    filter_parser: object
+    structured_query_translator: object
+    vectorstore: object
 
     def __init__(self, movie_data_path: str, vectorstore_dir: str):
         contexts_df = pd.read_csv(movie_data_path)
         contexts_df = contexts_df.dropna(subset=['title'])
-        contexts_df['title_genre_director_writer'] = contexts_df['title_genre_director_writer'].fillna('')
         
-        # 메타데이터 컬럼의 NaN 값 처리
-        metadata_columns = [info.name for info in metadata_field_info]
-        for col in metadata_columns:
+        for col in contexts_df.columns:
             if col in contexts_df.columns:
                 if contexts_df[col].dtype in ['float64', 'int64']:
                     contexts_df[col] = contexts_df[col].fillna(0)
@@ -150,12 +116,15 @@ class SelfQueryTool(BaseTool):
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         vectorstore = process_in_batches(documents, embeddings, batch_size=40000, vectorstore_dir=vectorstore_dir)
 
-        super().__init__(movie_retriever=SelfQueryRetriever.from_llm(
-            llm, vectorstore, content_description, metadata_field_info
-        ))
+        filter_parser = StructuredQueryOutputParser.from_components()
+        structured_query_translator = ChromaTranslator()
+        super().__init__(vectorstore=vectorstore, filter_parser=filter_parser, structured_query_translator=structured_query_translator)
 
-    def _run(self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None):
-        docs = self.movie_retriever.invoke(query)
+    def _run(self, query: str, filter: str, run_manager: Optional[CallbackManagerForToolRun] = None):
+        structured_query = StructuredQuery(query=query, filter=self.filter_parser.ast_parse(filter), limit=None)
+
+        new_query, search_kwargs = self.structured_query_translator.visit_structured_query(structured_query)
+        docs = self.vectorstore.search(new_query, "similarity", **search_kwargs)
         context = ""
         for doc in docs:
             context += json.dumps(doc.metadata, indent=4) + "\n\n"
