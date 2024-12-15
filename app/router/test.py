@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 KAKAO_API_URL = "https://kapi.kakao.com/v2/api/talk/memo/default/send"  # 카카오 API 엔드포인트
-ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')  # 발급받은 Access Token
+ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
 
 
 @router.post("/callback")
