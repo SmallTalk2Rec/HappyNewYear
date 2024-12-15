@@ -18,6 +18,9 @@ ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
 @router.post("/callback")
 async def handle_callback(request: Request):
 
+    data = await request.json()
+    print(data)
+
     kakao_url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
     headers = {
         "Authorization": f"Bearer {ACCESS_TOKEN}",
@@ -36,8 +39,8 @@ async def handle_callback(request: Request):
     }
 
     response = requests.post(kakao_url, headers=headers, json=payload)
+    print(response)
 
-    data = await request.json()
 
     # 카카오에서 전달받은 데이터 확인
     sender_id = data.get("user_key")  # 사용자의 고유 키
