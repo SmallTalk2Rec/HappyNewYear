@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START
 
-from tools import MovieRetrieverTool
+from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
 from graph.node import RecommendMovieNode
 from graph.prompt import RECOMMEND_MOVIE
