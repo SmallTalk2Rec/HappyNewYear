@@ -2,8 +2,7 @@ import os
 from dotenv import load_dotenv
 import streamlit as st
 
-from agent.builder import graph
-from agent.prompt import SYSTEM_TEMPLATE
+from graph.builder import graph
 
 load_dotenv()
 
@@ -42,10 +41,6 @@ st.write("")
 # Store LLM generated responses
 if "messages" not in st.session_state.keys():
     st.session_state.messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_TEMPLATE,
-        },
         {
             "role": "ai",
             "content": "안녕하세요 영화 추천 챗봇입니다. 무엇을 도와드릴까요?",

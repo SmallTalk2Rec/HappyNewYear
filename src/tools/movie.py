@@ -121,6 +121,8 @@ class MovieRetrieverTool(BaseTool):
         super().__init__(vectorstore=vectorstore, filter_parser=filter_parser, structured_query_translator=structured_query_translator)
 
     def _run(self, query: str, filter: str, run_manager: Optional[CallbackManagerForToolRun] = None):
+        if filter == "NO_FILTER":
+            filter = None
         structured_query = StructuredQuery(query=query, filter=self.filter_parser.ast_parse(filter), limit=None)
 
         new_query, search_kwargs = self.structured_query_translator.visit_structured_query(structured_query)
