@@ -1,58 +1,91 @@
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from pydantic import BaseModel
 from starlette.requests import Request
 import httpx
 import requests
+import time
+
 
 
 router = APIRouter()
 
 
-KAKAO_API_URL = "https://kapi.kakao.com/v2/api/talk/memo/default/send"  # 카카오 API 엔드포인트
 ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
+REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URL')
+TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 
+
+TOKEN_INFO = {
+    "access_token": None,
+    "refresh_token": "YOUR_REFRESH_TOKEN",  # 최초에 수동으로 발급한 Refresh Token
+    "expires_in": 0  # 만료 시간 (초 단위)
+}
+
+def get_access_token():
+    """
+    Refresh Token을 사용하여 Access Token을 갱신합니다.
+    """
+    data = {
+        "grant_type": "refresh_token",
+        "client_id": ACCESS_TOKEN,
+        "refresh_token": TOKEN_INFO["refresh_token"],
+    }
+
+    response = requests.post(TOKEN_URL, data=data)
+    if response.status_code == 200:
+        token_data = response.json()
+        TOKEN_INFO["access_token"] = token_data.get("access_token")
+        TOKEN_INFO["expires_in"] = token_data.get("expires_in", 0)
+
+        # Refresh Token이 갱신되었을 경우 업데이트
+        if "refresh_token" in token_data:
+            TOKEN_INFO["refresh_token"] = token_data["refresh_token"]
+        
+        print("Access Token이 성공적으로 갱신되었습니다.")
+    else:
+        print("토큰 갱신 실패:", response.json())
+        raise Exception("Failed to refresh Access Token")
+    
+
+
+def auto_refresh_token():
+    """
+    Access Token의 만료 시간을 확인하고 필요시 자동으로 갱신합니다.
+    """
+    if TOKEN_INFO["expires_in"] <= 0:
+        print("Access Token 만료. 갱신 중...")
+        get_access_token()
 
 @router.post("/callback")
 async def handle_callback(request: Request):
+    try:
+        auto_refresh_token()
 
-    data = await request.json()
-    print(data)
+        data = await request.json()
+        print(data)
+        sender_id = data.get("user_key")  # 사용자의 고유 키
+        message = data.get("message")  # 사용자가 보낸 메시지
 
-    kakao_url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
-    headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
-        "Content-Type": "application/json",
-    }
-
-    # 메시지 템플릿 정의
-    payload = {
-        "template_object": {
-            "object_type": "text",
-            "text": request.message,
-            "link": {
-                "web_url": request.web_url if request.web_url else "https://example.com"
-            },
-        }
-    }
-
-    response = requests.post(kakao_url, headers=headers, json=payload)
-    print(response)
+        # 사용자 메시지 처리
+        bot_response = await generate_response(message)
+        return {"status": "received"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
 
 
-    # 카카오에서 전달받은 데이터 확인
-    sender_id = data.get("user_key")  # 사용자의 고유 키
-    message = data.get("message")  # 사용자가 보낸 메시지
+        # 카카오에서 전달받은 데이터 확인
 
-    # 사용자 메시지 처리
-    bot_response = await generate_response(message)
 
     # 사용자에게 답장 전송
-    await send_message_to_kakao(sender_id, bot_response)
+    # await send_message_to_kakao(sender_id, bot_response)
+    
 
-    return {"status": "received"}
+    
 
 async def generate_response(user_message):
     # 챗봇 로직 예제
@@ -60,19 +93,19 @@ async def generate_response(user_message):
         return "안녕하세요! 무엇을 도와드릴까요?"
     return "죄송합니다, 이해하지 못했어요."
 
-async def send_message_to_kakao(user_key, message):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            KAKAO_API_URL,
-            headers={
-                "Authorization": f"Bearer {ACCESS_TOKEN}"
-            },
-            json={
-                "template_object": {
-                    "object_type": "text",
-                    "text": message,
-                }
-            }
-        )
-        if response.status_code != 200:
-            print(f"Failed to send message: {response.text}")
+# async def send_message_to_kakao(user_key, message):
+#     async with httpx.AsyncClient() as client:
+#         response = await client.post(
+#             KAKAO_API_URL,
+#             headers={
+#                 "Authorization": f"Bearer {ACCESS_TOKEN}"
+#             },
+#             json={
+#                 "template_object": {
+#                     "object_type": "text",
+#                     "text": message,
+#                 }
+#             }
+#         )
+#         if response.status_code != 200:
+#             print(f"Failed to send message: {response.text}")
