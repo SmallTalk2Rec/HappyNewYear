@@ -7,6 +7,7 @@ from starlette.requests import Request
 import httpx
 import requests
 import time
+import json
 
 
 
@@ -72,11 +73,16 @@ async def handle_callback(request: Request):
         data = await request.json()
         print(data)
         sender_id = data.get("user_key")  # 사용자의 고유 키
-        message = data.get("message")  # 사용자가 보낸 메시지
+        message = data.get("utterance")  # 사용자가 보낸 메시지
 
         # 사용자 메시지 처리
         # bot_response = await generate_response(message)
-        return "dsafijadsijfladsjflkasdjfkl"
+        return {
+            "template_object":{
+            "object_type":"text",
+            "test":message+"asdklfjasdljflkdsjflkjaslkdfjlka"
+            }
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
