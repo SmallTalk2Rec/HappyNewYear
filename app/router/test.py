@@ -36,7 +36,9 @@ def get_access_token():
     }
 
     response = requests.post(TOKEN_URL, data=data)
+    print(response)
     if response.status_code == 200:
+        print("access token 발급 완료")
         token_data = response.json()
         TOKEN_INFO["access_token"] = token_data.get("access_token")
         TOKEN_INFO["expires_in"] = token_data.get("expires_in", 0)
