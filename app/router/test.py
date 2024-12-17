@@ -62,7 +62,7 @@ def auto_refresh_token():
     """
     if TOKEN_INFO["expires_in"] <= 0:
         print("Access Token 만료. 갱신 중...")
-        get_access_token()
+        get_access_token(KAKAO_AUTHORIZATION_CODE)
 
 @router.post("/callback")
 async def handle_callback(request: Request):
@@ -75,7 +75,7 @@ async def handle_callback(request: Request):
         message = data.get("message")  # 사용자가 보낸 메시지
 
         # 사용자 메시지 처리
-        bot_response = await generate_response(message)
+        # bot_response = await generate_response(message)
         return {"status": "received"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -94,8 +94,8 @@ async def handle_callback(request: Request):
 async def generate_response(user_message):
     # 챗봇 로직 예제
     if user_message == "안녕":
-        return "안녕하세요! 무엇을 도와드릴까요?"
-    return "죄송합니다, 이해하지 못했어요."
+        return "안녕하세요! 무엇을 도와드릴까요?123123123"
+    return "죄송합니다, 이해하지 못했어요.1122131313"
 
 # async def send_message_to_kakao(user_key, message):
 #     async with httpx.AsyncClient() as client:
