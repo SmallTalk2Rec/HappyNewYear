@@ -78,9 +78,16 @@ async def handle_callback(request: Request):
         # 사용자 메시지 처리
         # bot_response = await generate_response(message)
         return {
-            "template_object":{
-            "object_type":"text",
-            "test":message+"asdklfjasdljflkdsjflkjaslkdfjlka"
+            
+            "version": "2.0",
+            "template": {
+                "outputs": [
+                    {
+                        "simpleText": {
+                            "text": str(message)+"anvseralkgakgkl"
+                        }
+                    }
+                ]
             }
         }
     except Exception as e:
