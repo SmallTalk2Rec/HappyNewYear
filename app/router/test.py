@@ -76,7 +76,7 @@ async def handle_callback(request: Request):
 
         # 사용자 메시지 처리
         # bot_response = await generate_response(message)
-        return {"status": "received"}
+        return "dsafijadsijfladsjflkasdjfkl"
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
