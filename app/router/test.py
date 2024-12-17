@@ -15,6 +15,7 @@ router = APIRouter()
 
 ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
 REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URL')
+KAKAO_AUTHORIZATION_CODE = os.getenv('KAKAO_AUTHORIZATION_CODE')
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 
@@ -25,14 +26,15 @@ TOKEN_INFO = {
     "expires_in": 0  # 만료 시간 (초 단위)
 }
 
-def get_access_token():
+def get_access_token(authorization_code):
     """
-    Refresh Token을 사용하여 Access Token을 갱신합니다.
+    Authorization Code를 사용해 Access Token과 Refresh Token을 가져옵니다.
     """
     data = {
-        "grant_type": "refresh_token",
+        "grant_type": "authorization_code",
         "client_id": ACCESS_TOKEN,
-        "refresh_token": TOKEN_INFO["refresh_token"],
+        "redirect_uri": REDIRECT_URI,
+        "code": authorization_code,
     }
 
     response = requests.post(TOKEN_URL, data=data)
