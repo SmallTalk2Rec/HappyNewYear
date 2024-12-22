@@ -1,1 +1,6 @@
 .env
+*.pyc
+chroma/
+*.bin
+notebooks/
+*.csv.env
