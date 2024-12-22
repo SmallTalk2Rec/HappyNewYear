@@ -1,13 +1,12 @@
 uvicorn
 gunicorn==20.1.0
-fastapi~=0.95.2
-starlette~=0.27.0
+fastapi~=0.78.0
+starlette==0.19.1
 pydantic
 datetime
 pytz
 httpx
 requests
-streamlit
 python-dotenv
 langgraph
 langchain-openai
