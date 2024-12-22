@@ -18,8 +18,6 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.query_constructors.chroma import ChromaTranslator
 from langchain.chains.query_constructor.ir import StructuredQuery
 
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-
 
 load_dotenv()
 

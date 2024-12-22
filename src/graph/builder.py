@@ -4,8 +4,8 @@ from langgraph.graph import StateGraph, START
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
-from graph.node import RecommendMovieNode
-from graph.prompt import RECOMMEND_MOVIE
+from graph.node import SupervisorNode, RecommendMovieNode
+from graph.prompt import SUPERVISOR_AGENT, RECOMMEND_MOVIE_AGENT
 
 load_dotenv()
 
@@ -16,6 +16,14 @@ workflow = StateGraph(GraphState)
 
 # Define the nodes
 workflow.add_node(
+    "supervisor_node",
+    SupervisorNode(
+        llm=llm,
+        system_template=SUPERVISOR_AGENT
+    )
+)
+
+workflow.add_node(
     "recommend_movie_node", 
     RecommendMovieNode(
         llm=llm, 
@@ -25,11 +33,11 @@ workflow.add_node(
                 vectorstore_dir="./data/chroma"
             )
         ],
-        system_template=RECOMMEND_MOVIE
+        system_template=RECOMMEND_MOVIE_AGENT
     )
 )
 
-workflow.add_edge(START, "recommend_movie_node")
+workflow.add_edge(START, "supervisor_node")
 
 # Compile the workflow
 graph = workflow.compile()
