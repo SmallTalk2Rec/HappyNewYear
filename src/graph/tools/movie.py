@@ -18,6 +18,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.query_constructors.chroma import ChromaTranslator
 from langchain.chains.query_constructor.ir import StructuredQuery
 
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+
 
 load_dotenv()
 
@@ -123,7 +125,9 @@ class MovieRetrieverTool(BaseTool):
     def _run(self, query: str, filter: str, run_manager: Optional[CallbackManagerForToolRun] = None):
         if filter == "NO_FILTER":
             filter = None
-        structured_query = StructuredQuery(query=query, filter=self.filter_parser.ast_parse(filter), limit=None)
+        else:
+            filter = self.filter_parser.ast_parse(filter)
+        structured_query = StructuredQuery(query=query, filter=filter, limit=None)
 
         new_query, search_kwargs = self.structured_query_translator.visit_structured_query(structured_query)
         docs = self.vectorstore.search(new_query, "similarity", **search_kwargs)
