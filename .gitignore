@@ -3,4 +3,5 @@
 chroma/
 *.bin
 notebooks/
-*.csv.env
+*.csv
+chroma_/
