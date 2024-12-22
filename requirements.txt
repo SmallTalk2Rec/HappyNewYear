@@ -6,7 +6,7 @@ pydantic
 datetime
 pytz
 httpx
-requestsß
+requests
 streamlit
 python-dotenv
 langgraph
