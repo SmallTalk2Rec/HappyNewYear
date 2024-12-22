@@ -1,4 +1,5 @@
 import os
+from agent.builder import graph
 
 from fastapi import APIRouter, HTTPException
 
@@ -8,7 +9,6 @@ import httpx
 import requests
 import time
 import json
-
 
 
 router = APIRouter()
@@ -76,7 +76,9 @@ async def handle_callback(request: Request):
         message = data.get("userRequest")['utterance']  # 사용자가 보낸 메시지
 
         # 사용자 메시지 처리
-        # bot_response = await generate_response(message)
+        bot_response = graph.invoke({"messages": str(message)})["messages"][-1].content
+
+
         return {
             
             "version": "2.0",
@@ -84,7 +86,7 @@ async def handle_callback(request: Request):
                 "outputs": [
                     {
                         "simpleText": {
-                            "text": str(message)+"anvseralkgakgkl"
+                            "text": bot_response
                         }
                     }
                 ]
@@ -101,14 +103,6 @@ async def handle_callback(request: Request):
     # 사용자에게 답장 전송
     # await send_message_to_kakao(sender_id, bot_response)
     
-
-    
-
-async def generate_response(user_message):
-    # 챗봇 로직 예제
-    if user_message == "안녕":
-        return "안녕하세요! 무엇을 도와드릴까요?123123123"
-    return "죄송합니다, 이해하지 못했어요.1122131313"
 
 # async def send_message_to_kakao(user_key, message):
 #     async with httpx.AsyncClient() as client:
