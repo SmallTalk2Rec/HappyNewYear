@@ -1,7 +1,7 @@
 uvicorn
 gunicorn==20.1.0
-fastapi~=0.78.0
-starlette==0.19.1
+fastapi~=0.95.2
+starlette~=0.27.0
 pydantic
 datetime
 pytz
