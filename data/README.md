@@ -1,5 +1,7 @@
 # 테이블 명세
 
+> [구글 드라이브 링크](https://drive.google.com/drive/folders/1V2xRgN2h3gniuUU3DekYkrvDDRCF-_zl?usp=drive_link)
+
 ## custom_movie_rating
 - 설명: 사용자가 영화 평가한 데이터   
 - columns:  
