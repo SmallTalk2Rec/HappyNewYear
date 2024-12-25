@@ -1,5 +1,5 @@
 import os
-from agent.builder import graph
+from graph.builder import graph
 
 from fastapi import APIRouter, HTTPException
 
