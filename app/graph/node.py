@@ -7,7 +7,9 @@ from graph.state import GraphState
 
 
 class Router(BaseModel):
-    target: str = Field(description="The target of the message, either ‘user’ or 'RecommendMovieAgent'")
+    target: str = Field(
+        description="The target of the message, either ‘user’ or 'RecommendMovieAgent'"
+    )
     message: str = Field(description="The message to be sent to the target")
 
 
@@ -20,7 +22,7 @@ class SupervisorNode:
                 "content": system_template,
             }
         ]
-    
+
     def __call__(self, state: GraphState) -> GraphState:
         messages = self.system_message + state.messages + state.inter_messages
         response = self.llm.invoke(messages)
@@ -32,11 +34,11 @@ class SupervisorNode:
                         {
                             "role": "assistant",
                             "name": "SupervisorAgent",
-                            "content": response.message
+                            "content": response.message,
                         }
                     ]
                 },
-                goto="recommend_movie_node"
+                goto="recommend_movie_node",
             )
         elif response.target == "user":
             return Command(
@@ -45,21 +47,22 @@ class SupervisorNode:
                         {
                             "role": "assistant",
                             "name": "SupervisorAgent",
-                            "content": response.message
+                            "content": response.message,
                         }
                     ]
                 },
-                goto=END
+                goto=END,
             )
         else:
             raise ValueError("Invalid target")
-    
 
 
 class RecommendMovieNode:
     def __init__(self, llm, tools, system_template):
-        self.agent = create_react_agent(llm, tools=tools, state_modifier=system_template)
-    
+        self.agent = create_react_agent(
+            llm, tools=tools, state_modifier=system_template
+        )
+
     def __call__(self, state: GraphState) -> GraphState:
         result = self.agent.invoke({"messages": state.inter_messages})
         return Command(
@@ -68,9 +71,9 @@ class RecommendMovieNode:
                     {
                         "role": "assistant",
                         "name": "RecommendMovieAgent",
-                        "content": result["messages"][-1].content
+                        "content": result["messages"][-1].content,
                     }
                 ]
             },
-            goto="supervisor_node"
+            goto="supervisor_node",
         )

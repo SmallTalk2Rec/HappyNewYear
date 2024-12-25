@@ -16,25 +16,21 @@ workflow = StateGraph(GraphState)
 
 # Define the nodes
 workflow.add_node(
-    "supervisor_node",
-    SupervisorNode(
-        llm=llm,
-        system_template=SUPERVISOR_AGENT
-    )
+    "supervisor_node", SupervisorNode(llm=llm, system_template=SUPERVISOR_AGENT)
 )
 
 workflow.add_node(
-    "recommend_movie_node", 
+    "recommend_movie_node",
     RecommendMovieNode(
-        llm=llm, 
+        llm=llm,
         tools=[
             MovieRetrieverTool(
-                movie_data_path="./data/241210/movie_info_watch.csv", 
-                vectorstore_dir="./data/chroma"
+                movie_data_path="./data/241210/movie_info_watch.csv",
+                vectorstore_dir="./data/chroma",
             )
         ],
-        system_template=RECOMMEND_MOVIE_AGENT
-    )
+        system_template=RECOMMEND_MOVIE_AGENT,
+    ),
 )
 
 workflow.add_edge(START, "supervisor_node")
