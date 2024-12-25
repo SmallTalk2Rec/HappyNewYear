@@ -22,11 +22,18 @@ from langchain.chains.query_constructor.ir import StructuredQuery
 load_dotenv()
 
 
-def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000, vectorstore_dir: str = "./data/chroma"):
+def process_in_batches(
+    documents: List[Document],
+    embeddings,
+    batch_size: int = 40000,
+    vectorstore_dir: str = "./data/chroma",
+):
     if os.path.exists(vectorstore_dir):
-        vectorstore = Chroma(embedding_function=embeddings, persist_directory=vectorstore_dir)
+        vectorstore = Chroma(
+            embedding_function=embeddings, persist_directory=vectorstore_dir
+        )
         return vectorstore
-   
+
     total_docs = len(documents)
     vectorstore = None
 
@@ -34,13 +41,15 @@ def process_in_batches(documents: List[Document], embeddings, batch_size: int = 
     progress_bar = tqdm(
         range(0, total_docs, batch_size),
         desc="Creating vector store",
-        total=(total_docs + batch_size - 1) // batch_size
+        total=(total_docs + batch_size - 1) // batch_size,
     )
 
     for i in progress_bar:
-        batch = documents[i:min(i + batch_size, total_docs)]
-        progress_bar.set_postfix({"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"})
-        
+        batch = documents[i : min(i + batch_size, total_docs)]
+        progress_bar.set_postfix(
+            {"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"}
+        )
+
         if vectorstore is None:
             vectorstore = Chroma.from_documents(
                 batch,
@@ -51,7 +60,6 @@ def process_in_batches(documents: List[Document], embeddings, batch_size: int = 
             vectorstore.add_documents(batch)
 
     return vectorstore
-
 
 
 class MovieRetrieverInput(BaseModel):
@@ -94,8 +102,8 @@ class MovieRetrieverTool(BaseTool):
     vectorstore: object
 
     def __init__(self, movie_data_path: str, vectorstore_dir: str):
-        contexts_df = pd.read_csv(movie_data_path, encoding='utf-8').iloc[:10]
-        contexts_df = contexts_df.dropna(subset=['Title'])
+        contexts_df = pd.read_csv(movie_data_path, encoding="utf-8").iloc[:10]
+        contexts_df = contexts_df.dropna(subset=["Title"])
 
         def func(x):
             if pd.isna(x):
@@ -104,13 +112,14 @@ class MovieRetrieverTool(BaseTool):
             if pd.isna(x) or x == "None":
                 return None
             return float(x)
-        contexts_df["N_Comments"] = contexts_df["N_Comments"].apply(func)        
+
+        contexts_df["N_Comments"] = contexts_df["N_Comments"].apply(func)
         for col in contexts_df.columns:
             if col in contexts_df.columns:
-                if contexts_df[col].dtype in ['float64', 'int64']:
+                if contexts_df[col].dtype in ["float64", "int64"]:
                     contexts_df[col] = contexts_df[col].fillna(0)
                 else:
-                    contexts_df[col] = contexts_df[col].fillna('')
+                    contexts_df[col] = contexts_df[col].fillna("")
 
         # Document 생성
         print("Creating document loader...")
@@ -119,20 +128,33 @@ class MovieRetrieverTool(BaseTool):
 
         print("Initializing embeddings...")
         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        vectorstore = process_in_batches(documents, embeddings, batch_size=40000, vectorstore_dir=vectorstore_dir)
+        vectorstore = process_in_batches(
+            documents, embeddings, batch_size=40000, vectorstore_dir=vectorstore_dir
+        )
 
         filter_parser = StructuredQueryOutputParser.from_components()
         structured_query_translator = ChromaTranslator()
-        super().__init__(vectorstore=vectorstore, filter_parser=filter_parser, structured_query_translator=structured_query_translator)
+        super().__init__(
+            vectorstore=vectorstore,
+            filter_parser=filter_parser,
+            structured_query_translator=structured_query_translator,
+        )
 
-    def _run(self, query: str, filter: str, run_manager: Optional[CallbackManagerForToolRun] = None):
+    def _run(
+        self,
+        query: str,
+        filter: str,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ):
         if filter == "NO_FILTER":
             filter = None
         else:
             filter = self.filter_parser.ast_parse(filter)
         structured_query = StructuredQuery(query=query, filter=filter, limit=None)
 
-        new_query, search_kwargs = self.structured_query_translator.visit_structured_query(structured_query)
+        new_query, search_kwargs = (
+            self.structured_query_translator.visit_structured_query(structured_query)
+        )
         docs = self.vectorstore.search(new_query, "similarity", **search_kwargs)
         context = ""
         for doc in docs:
@@ -145,4 +167,3 @@ class MovieRetrieverTool(BaseTool):
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
     ):
         return self._run(query, run_manager)
-

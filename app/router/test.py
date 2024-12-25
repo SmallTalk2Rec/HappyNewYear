@@ -14,9 +14,9 @@ import json
 router = APIRouter()
 
 
-ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')  # 발급받은 Access Token
-REDIRECT_URI = os.getenv('KAKAO_REDIRECT_URL')
-KAKAO_AUTHORIZATION_CODE = os.getenv('KAKAO_AUTHORIZATION_CODE')
+ACCESS_TOKEN = os.getenv("KAKAO_ACCESS_TOKEN")  # 발급받은 Access Token
+REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URL")
+KAKAO_AUTHORIZATION_CODE = os.getenv("KAKAO_AUTHORIZATION_CODE")
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 
@@ -24,8 +24,9 @@ KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 TOKEN_INFO = {
     "access_token": None,
     "refresh_token": "YOUR_REFRESH_TOKEN",  # 최초에 수동으로 발급한 Refresh Token
-    "expires_in": 0  # 만료 시간 (초 단위)
+    "expires_in": 0,  # 만료 시간 (초 단위)
 }
+
 
 def get_access_token(authorization_code):
     """
@@ -49,12 +50,11 @@ def get_access_token(authorization_code):
         # Refresh Token이 갱신되었을 경우 업데이트
         if "refresh_token" in token_data:
             TOKEN_INFO["refresh_token"] = token_data["refresh_token"]
-        
+
         print("Access Token이 성공적으로 갱신되었습니다.")
     else:
         print("토큰 갱신 실패:", response.json())
         raise Exception("Failed to refresh Access Token")
-    
 
 
 def auto_refresh_token():
@@ -65,6 +65,7 @@ def auto_refresh_token():
         print("Access Token 만료. 갱신 중...")
         get_access_token(KAKAO_AUTHORIZATION_CODE)
 
+
 @router.post("/callback")
 async def handle_callback(request: Request):
     try:
@@ -73,36 +74,23 @@ async def handle_callback(request: Request):
         data = await request.json()
         print(data)
         sender_id = data.get("user_key")  # 사용자의 고유 키
-        message = data.get("userRequest")['utterance']  # 사용자가 보낸 메시지
+        message = data.get("userRequest")["utterance"]  # 사용자가 보낸 메시지
 
         # 사용자 메시지 처리
         bot_response = graph.invoke({"messages": str(message)})["messages"][-1].content
 
-
         return {
-            
             "version": "2.0",
-            "template": {
-                "outputs": [
-                    {
-                        "simpleText": {
-                            "text": bot_response
-                        }
-                    }
-                ]
-            }
+            "template": {"outputs": [{"simpleText": {"text": bot_response}}]},
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
-
 
         # 카카오에서 전달받은 데이터 확인
 
-
     # 사용자에게 답장 전송
     # await send_message_to_kakao(sender_id, bot_response)
-    
+
 
 # async def send_message_to_kakao(user_key, message):
 #     async with httpx.AsyncClient() as client:
