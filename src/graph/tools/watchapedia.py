@@ -18,8 +18,6 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.query_constructors.chroma import ChromaTranslator
 from langchain.chains.query_constructor.ir import StructuredQuery
 
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-
 
 load_dotenv()
 
@@ -96,7 +94,7 @@ class MovieRetrieverTool(BaseTool):
     vectorstore: object
 
     def __init__(self, movie_data_path: str, vectorstore_dir: str):
-        contexts_df = pd.read_csv(movie_data_path)
+        contexts_df = pd.read_csv(movie_data_path, encoding='utf-8').iloc[:10]
         contexts_df = contexts_df.dropna(subset=['Title'])
 
         def func(x):
@@ -138,7 +136,7 @@ class MovieRetrieverTool(BaseTool):
         docs = self.vectorstore.search(new_query, "similarity", **search_kwargs)
         context = ""
         for doc in docs:
-            context += json.dumps(doc.metadata, indent=4) + "\n\n"
+            context += json.dumps(doc.metadata, indent=4, ensure_ascii=False) + "\n\n"
         return context
 
     async def _arun(
