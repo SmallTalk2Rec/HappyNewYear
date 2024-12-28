@@ -29,8 +29,8 @@ workflow.add_node(
         llm=llm, 
         tools=[
             MovieRetrieverTool(
-                movie_data_path="./data/241210/movie_info_watch.csv", 
-                vectorstore_dir="./data/chroma"
+                uri_path="sqlite:///data/movie_info_watch_sql.db", 
+                data_path="./data/241228/movie_info_watch.csv"
             )
         ],
         system_template=RECOMMEND_MOVIE_AGENT

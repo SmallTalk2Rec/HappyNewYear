@@ -12,11 +12,9 @@ from langchain_core.callbacks import (
     AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
-from langchain.chains.query_constructor.base import StructuredQueryOutputParser
-from langchain_community.document_loaders import DataFrameLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.query_constructors.chroma import ChromaTranslator
-from langchain.chains.query_constructor.ir import StructuredQuery
+from langchain_community.utilities import SQLDatabase
+from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+from sqlalchemy import create_engine
 
 
 load_dotenv()
@@ -56,87 +54,69 @@ def process_in_batches(documents: List[Document], embeddings, batch_size: int = 
 
 class MovieRetrieverInput(BaseModel):
     query: str = Field(
-        description="Text string to search within movie synopsis. Should only contain search terms without any filtering conditions."
-    )
-    filter: Optional[str] = Field(
-        description="""Optional logical condition statement for filtering movies. Must use the following format:
-        - Comparison: comp(attr, val) where comp is one of: eq, ne, gt, gte, lt, lte
-        - Logical operations: op(statement1, statement2, ...) where op is one of: and, or
-        - Date format must be YYYY-MM-DD
-        - Use 'NO_FILTER' if no filtering is needed
-        """
+        description="SQL query to search movie information. Must be valid SQLite syntax and use 'movie' as table name. Query can include SELECT statements with various conditions (WHERE, ORDER BY, etc.) to filter and sort movie data. Returns movie details including title, genre, ratings, cast information, and more."
     )
 
 
 class MovieRetrieverTool(BaseTool):
     name: str = "movie_retriever"
-    description: str = """Tool for searching movie with the following information:
-    - MovieID: movie id. (TEXT)
-    - Title: movie title. (TEXT)
-    - Year: movie release year. (FLOAT)
-    - Genre: movie genre (TEXT)
-    - Country: country where the movie was made (TEXT)
-    - Runtime: movie runtime. (ex., 1시간 30분) (TEXT)
-    - Age: movie age rating. one of "전체", "7세", "12세", "15세", "청불". (TEXT)
-    - Cast_Production_Info_List: Movie director and cast. (ex., ('정윤수', '조연 | 터프 남')) (TEXT)
-    - Synopsis: movie synopsis. (TEXT)
-    - Avg_Rating: Average movie rating score. range 0-5. (FLOAT)
-    - N_Rating(만명): Number of movie ratings. In units of ten thousand. (FLOAT)
-    - N_Comments: Number of movie reviews. (FLOAT)
+    description: str = """Tool for searching Korean movie database using SQL queries.
 
-    Use comparison operators (eq, ne, gt, gte, lt, lte) and logical operators (and, or) for filtering.
-    Returns relevant movie data matching the specified criteria."""
+Usage:
+- Execute queries with tool.invoke({"query": "YOUR_SQL_QUERY"})
+- Use SQLite syntax with 'movie' table
+- Filter/sort using WHERE, ORDER BY, etc.
+
+Main fields:
+- MovieID: Unique identifier
+- Title
+- Year
+- Genre
+- Country
+- Runtime: e.g. '1시간 30분'
+- Age: "전체"|"7세"|"12세"|"15세"|"청불"
+- Avg_Rating: 0-5 scale
+- N_Rating(만명): Ratings count in 10k
+- N_Comments: Review count
+"""
+
     args_schema: Type[BaseModel] = MovieRetrieverInput
     return_direct: bool = False
 
-    filter_parser: object
-    structured_query_translator: object
-    vectorstore: object
+    db_tool: object
 
-    def __init__(self, movie_data_path: str, vectorstore_dir: str):
-        contexts_df = pd.read_csv(movie_data_path, encoding='utf-8').iloc[:10]
-        contexts_df = contexts_df.dropna(subset=['Title'])
+    def __init__(self, uri_path, data_path):
+        if not os.path.exists(uri_path.replace("sqlite:///", "")):
+            contexts_df = pd.read_csv(data_path)
+            contexts_df = contexts_df.dropna(subset=['Title'])
 
-        def func(x):
-            if pd.isna(x):
-                return None
-            x = x.strip("+\n")
-            if pd.isna(x) or x == "None":
-                return None
-            return float(x)
-        contexts_df["N_Comments"] = contexts_df["N_Comments"].apply(func)        
-        for col in contexts_df.columns:
-            if col in contexts_df.columns:
-                if contexts_df[col].dtype in ['float64', 'int64']:
-                    contexts_df[col] = contexts_df[col].fillna(0)
-                else:
-                    contexts_df[col] = contexts_df[col].fillna('')
+            def func(x):
+                if pd.isna(x):
+                    return None
+                x = x.strip("+\n")
+                if pd.isna(x) or x == "None":
+                    return None
+                return float(x)
+            
+            contexts_df["N_Comments"] = contexts_df["N_Comments"].apply(func)        
+            for col in contexts_df.columns:
+                if col in contexts_df.columns:
+                    if contexts_df[col].dtype in ['float64', 'int64']:
+                        contexts_df[col] = contexts_df[col].fillna(0)
+                    else:
+                        contexts_df[col] = contexts_df[col].fillna('')
 
-        # Document 생성
-        print("Creating document loader...")
-        loader = DataFrameLoader(contexts_df, page_content_column="Synopsis")
-        documents = loader.load()
+            engine = create_engine(uri_path)
+            contexts_df.to_sql('movie', engine, if_exists='fail', index=False)
+            engine.dispose()
+        
+        movie_db = SQLDatabase.from_uri(uri_path)
+        db_tool = QuerySQLDataBaseTool(db=movie_db)
+        
+        super().__init__(db_tool=db_tool)
 
-        print("Initializing embeddings...")
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        vectorstore = process_in_batches(documents, embeddings, batch_size=40000, vectorstore_dir=vectorstore_dir)
-
-        filter_parser = StructuredQueryOutputParser.from_components()
-        structured_query_translator = ChromaTranslator()
-        super().__init__(vectorstore=vectorstore, filter_parser=filter_parser, structured_query_translator=structured_query_translator)
-
-    def _run(self, query: str, filter: str, run_manager: Optional[CallbackManagerForToolRun] = None):
-        if filter == "NO_FILTER":
-            filter = None
-        else:
-            filter = self.filter_parser.ast_parse(filter)
-        structured_query = StructuredQuery(query=query, filter=filter, limit=None)
-
-        new_query, search_kwargs = self.structured_query_translator.visit_structured_query(structured_query)
-        docs = self.vectorstore.search(new_query, "similarity", **search_kwargs)
-        context = ""
-        for doc in docs:
-            context += json.dumps(doc.metadata, indent=4, ensure_ascii=False) + "\n\n"
+    def _run(self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None):
+        context = self.db_tool.invoke({"query": query})
         return context
 
     async def _arun(
