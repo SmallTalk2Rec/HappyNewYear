@@ -23,8 +23,12 @@ def get_data(movie_id):
     
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        )
+        page = context.new_page()        
+        page.goto(url, timeout=600000)
+
 
         # 스크롤 끝까지 내리기
         fetch_with_scroll(page)
