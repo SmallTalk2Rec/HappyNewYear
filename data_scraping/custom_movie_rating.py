@@ -7,8 +7,12 @@ import time
 def fetch_with_scroll(url):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        )
+        page = context.new_page() 
+        page.goto(url, timeout=600000)
+        
 
         # JavaScript로 스크롤을 끝까지 내리기
         previous_height = 0
