@@ -27,8 +27,8 @@ class FastAPIApp:
         }
 
         # 스케줄러 객체 생성
-        # self.scheduler = BackgroundScheduler(timezone="Asia/Seoul")
-        # self.scheduler.start()
+        self.scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+        self.scheduler.start()
 
         self.setup_events()
 
