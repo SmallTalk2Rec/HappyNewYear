@@ -46,16 +46,16 @@ async def handle_callback(request: Request):
         print(data)
         user_id = data.get("userRequest")["user"]["id"]  # 사용자의 고유 키
         message = data.get("userRequest")["utterance"]  # 사용자가 보낸 메시지
-
         if user_id not in my_app.user_conversations:
             # 할당된 chain이 없으면 생성 후 할당
-            my_app.user_conversations[user_id] = ConversationLangGraph().get_graph()
-
+            my_app.user_conversations[user_id] = ConversationLangGraph()
         # 사전에 할당해 놓은 chain 불러와서 사용
-        graph = my_app.user_conversations[user_id]
+        graph = my_app.user_conversations[user_id].get_graph()
+        print("graph 객체 할당 완료")
 
         # graph 결과 받아오기
         bot_response = graph.run(message)
+        print("graph 객체 할당 완료")
 
         # response 형태 수정
         response = APIResponse(
