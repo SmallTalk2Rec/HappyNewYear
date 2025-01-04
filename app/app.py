@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
 class FastAPIApp:
@@ -24,6 +25,19 @@ class FastAPIApp:
             "refresh_token": "YOUR_REFRESH_TOKEN",  # 최초에 수동으로 발급한 Refresh Token
             "expires_in": 3600,  # 만료 시간 (초 단위)
         }
+
+        # 스케줄러 객체 생성
+        self.scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+        self.scheduler.start()
+
+        self.setup_events()
+
+    def setup_events(self):
+        # select_sheet(self)
+        # self.scheduler.add_job(
+        #     select_sheet, "cron", hour=0, minute=0, args=[self], id="create new sheet"
+        # )
+        print("start!!!!!!!!!!!")
 
     def include_router(self, router):
         self.app.include_router(router)

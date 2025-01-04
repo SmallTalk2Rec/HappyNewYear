@@ -6,13 +6,16 @@ import datetime
 import pytz
 import os
 
-from config import access_kakao
+from app.auth import kakao_auth
 from app import my_app
 from graph.builder import ConversationLangGraph
+from utils.chat_history import delete_chat_history
 
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "smalltalk2rec"
+
+KR_TIMEZONE = pytz.timezone("Asia/Seoul")
 
 
 router = APIRouter()
@@ -30,8 +33,8 @@ async def index():
     '상태 체크용 API'\n
     :return:
     """
-    kr_timezone = pytz.timezone("Asia/Seoul")
-    current_time = datetime.datetime.now(kr_timezone)
+
+    current_time = datetime.datetime.now(KR_TIMEZONE)
     return Response(
         f"samlltalk2rec server API (UTC: {current_time.strftime('%Y.%m.%d %H:%M:%S')})"
     )
@@ -40,7 +43,7 @@ async def index():
 @router.post("/callback")
 async def handle_callback(request: Request):
     try:
-        access_kakao.auto_refresh_token(my_app)
+        kakao_auth.auto_refresh_token(my_app)
 
         data = await request.json()
         print(data)
@@ -62,6 +65,22 @@ async def handle_callback(request: Request):
             version="2.0",
             template={"outputs": [{"simpleText": {"text": bot_response}}]},
         )
+
+        # 이미 스케줄러에 등록되어 있으면 삭제 후에 작업 등록
+        try:
+            job = my_app.scheduler.get_job(user_id)
+            job.remove()
+        except Exception:
+            pass
+
+        my_app.scheduler.add_job(
+            delete_chat_history,
+            "date",
+            run_date=datetime.datetime.now(KR_TIMEZONE) + datetime.timedelta(hours=1),
+            id=user_id,
+            args=[user_id, my_app.user_conversations],
+        )
+
         return response
 
     except Exception as e:
