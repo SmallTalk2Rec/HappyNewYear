@@ -10,7 +10,7 @@ TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 
 
-def get_access_token(authorization_code, app):
+def get_access_token(app, authorization_code):
     """
     Authorization Code를 사용해 Access Token과 Refresh Token을 가져옵니다.
     """
@@ -46,4 +46,4 @@ def auto_refresh_token(app, kakao_authorization_code):
     """
     if app.token_info["expires_in"] <= 0:
         print("Access Token 만료. 갱신 중...")
-        get_access_token(kakao_authorization_code)
+        get_access_token(app, kakao_authorization_code)
