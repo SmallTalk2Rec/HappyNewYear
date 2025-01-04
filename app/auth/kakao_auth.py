@@ -1,11 +1,33 @@
 import os
 import requests
+from requests_oauthlib import OAuth2Session
 
-ACCESS_TOKEN = os.getenv("KAKAO_ACCESS_TOKEN")  # 발급받은 Access Token
-REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URL")
+
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")  # 발급받은 Access Token
+KAKAO_REDIRECT_URL = os.getenv("KAKAO_REDIRECT_URL")
 KAKAO_AUTHORIZATION_CODE = os.getenv("KAKAO_AUTHORIZATION_CODE")
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
+
+
+def get_authorization_code():
+    oauth = OAuth2Session(KAKAO_REST_API_KEY, redirect_uri=KAKAO_REDIRECT_URL)
+
+    # 사용자에게 인증 URL 제공
+    authorization_url, state = oauth.authorization_url(KAKAO_AUTH_URL)
+
+    # params = {
+    #     "response_type": "code",
+    #     "client_id": KAKAO_REST_API_KEY,
+    #     "redirect_uri": KAKAO_REDIRECT_URL,
+    # }
+
+    # # response = requests.get(KAKAO_AUTH_URL, params=params)
+    # response = requests.get(
+    #     f"https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${KAKAO_REST_API_KEY}&redirect_uri=${KAKAO_REDIRECT_URL}"
+    # )
+    print(authorization_url, state)  # 인증 코드 확인
+    return authorization_url
 
 
 def get_access_token(authorization_code, app):
@@ -14,8 +36,8 @@ def get_access_token(authorization_code, app):
     """
     data = {
         "grant_type": "authorization_code",
-        "client_id": ACCESS_TOKEN,
-        "redirect_uri": REDIRECT_URI,
+        "client_id": KAKAO_REST_API_KEY,
+        "redirect_uri": KAKAO_REDIRECT_URL,
         "code": authorization_code,
     }
 
@@ -44,3 +66,8 @@ def auto_refresh_token(app):
     if app.token_info["expires_in"] <= 0:
         print("Access Token 만료. 갱신 중...")
         get_access_token(KAKAO_AUTHORIZATION_CODE)
+
+
+if __name__ == "__main__":
+    code = get_authorization_code()
+    print(code)
