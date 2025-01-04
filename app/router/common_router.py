@@ -17,8 +17,8 @@ async def kakao_login():
     Kakao Authorization URL로 리다이렉트.
     """
     authorization_url = f"https://kauth.kakao.com/oauth/authorize?client_id={KAKAO_REST_API_KEY}&redirect_uri={KAKAO_REDIRECT_URL}/oauth&response_type=code"
-    # return RedirectResponse(authorization_url)  ## 디버깅 필요
-    return authorization_url
+    return RedirectResponse(authorization_url)  ## 디버깅 필요
+    # return authorization_url
 
 
 @common_router.get("/oauth")
