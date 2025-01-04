@@ -26,6 +26,7 @@ def get_access_token(authorization_code, app):
     if response.status_code == 200:
         print("access token 발급 완료")
         token_data = response.json()
+        print(token_data)
         app.token_info["access_token"] = token_data.get("access_token")
         app.token_info["expires_in"] = token_data.get("expires_in", 0)
 

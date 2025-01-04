@@ -23,7 +23,7 @@ class FastAPIApp:
         self.token_info = {
             "access_token": None,  # 최초 access_token은 authorizaion 토큰으로 발급
             "refresh_token": "YOUR_REFRESH_TOKEN",  # 최초에 수동으로 발급한 Refresh Token
-            "expires_in": 3600,  # 만료 시간 (초 단위)
+            "expires_in": 0,  # 만료 시간 (초 단위)
         }
 
         # 스케줄러 객체 생성
