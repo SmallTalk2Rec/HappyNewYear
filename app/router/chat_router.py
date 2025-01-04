@@ -6,7 +6,6 @@ import datetime
 import pytz
 import os
 
-from auth import kakao_auth
 from app import my_app
 from graph.builder import ConversationLangGraph
 from utils.chat_history import delete_chat_history
@@ -45,7 +44,7 @@ async def handle_callback(request: Request):
     try:
         data = await request.json()
         print(data)
-        user_id = data.get("user_key")  # 사용자의 고유 키
+        user_id = data.get("userRequest")["user"]["id"]  # 사용자의 고유 키
         message = data.get("userRequest")["utterance"]  # 사용자가 보낸 메시지
 
         if user_id not in my_app.user_conversations:
@@ -64,20 +63,20 @@ async def handle_callback(request: Request):
             template={"outputs": [{"simpleText": {"text": bot_response}}]},
         )
 
-        # # 이미 스케줄러에 등록되어 있으면 삭제 후에 작업 등록
-        # try:
-        #     job = my_app.scheduler.get_job(user_id)
-        #     job.remove()
-        # except Exception:
-        #     pass
+        # 이미 스케줄러에 등록되어 있으면 삭제 후에 작업 등록
+        try:
+            job = my_app.scheduler.get_job(user_id)
+            job.remove()
+        except Exception:
+            pass
 
-        # my_app.scheduler.add_job(
-        #     delete_chat_history,
-        #     "date",
-        #     run_date=datetime.datetime.now(KR_TIMEZONE) + datetime.timedelta(hours=1),
-        #     id=user_id,
-        #     args=[user_id, my_app.user_conversations],
-        # )
+        my_app.scheduler.add_job(
+            delete_chat_history,
+            "date",
+            run_date=datetime.datetime.now(KR_TIMEZONE) + datetime.timedelta(hours=1),
+            id=user_id,
+            args=[user_id, my_app.user_conversations],
+        )
 
         return response
 
