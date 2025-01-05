@@ -23,37 +23,6 @@ from sqlalchemy import create_engine
 load_dotenv()
 
 
-# def process_in_batches(documents: List[Document], embeddings, batch_size: int = 40000, vectorstore_dir: str = "./data/chroma"):
-#     if os.path.exists(vectorstore_dir):
-#         vectorstore = Chroma(embedding_function=embeddings, persist_directory=vectorstore_dir)
-#         return vectorstore
-   
-#     total_docs = len(documents)
-#     vectorstore = None
-
-#     # tqdm으로 진행률 표시
-#     progress_bar = tqdm(
-#         range(0, total_docs, batch_size),
-#         desc="Creating vector store",
-#         total=(total_docs + batch_size - 1) // batch_size
-#     )
-
-#     for i in progress_bar:
-#         batch = documents[i:min(i + batch_size, total_docs)]
-#         progress_bar.set_postfix({"batch": f"{i//batch_size + 1}", "docs": f"{len(batch)}"})
-        
-#         if vectorstore is None:
-#             vectorstore = Chroma.from_documents(
-#                 batch,
-#                 embeddings,
-#                 persist_directory=vectorstore_dir,
-#             )
-#         else:
-#             vectorstore.add_documents(batch)
-
-#     return vectorstore
-
-
 class MovieRetrieverInput(BaseModel):
     sql_query: str = Field(
         description="SQL query to filter movies based on metadata. Must use valid SQLite syntax and 'movie' as table name. Query MUST return a list of MovieIDs using 'SELECT MovieID FROM movie WHERE...'. Any other SELECT fields will be ignored as only MovieID column is processed."
