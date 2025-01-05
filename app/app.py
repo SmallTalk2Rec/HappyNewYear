@@ -17,7 +17,7 @@ class FastAPIApp:
             allow_headers=["*"],
         )
         # 유저 id 및 이전 발화를 저장할 dictionary 생성
-        self.user_converation = {}
+        self.user_conversations = {}
 
         # 카카오톡 access, refresh 토큰 저장을 위한 dictionary 생성
         self.token_info = {
