@@ -54,7 +54,7 @@ async def handle_callback(request: Request):
     print("graph 객체 할당 완료")
 
     # graph 결과 받아오기
-    bot_response = graph.run(message)
+    bot_response = my_app.user_conversations[user_id].run(message)
     print("graph 객체 할당 완료")
 
     # response 형태 수정
