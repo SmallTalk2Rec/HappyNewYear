@@ -1,3 +1,10 @@
+import os
+import sys
+
+print(sys.path)
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+print(sys.path)
+
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START
@@ -28,8 +35,8 @@ class ConversationLangGraph:
                 llm=self.llm,
                 tools=[
                     MovieRetrieverTool(
-                        movie_data_path="./data/241210/movie_info_watch.csv",
-                        vectorstore_dir="./data/chroma",
+                        movie_data_path="../data/241210/movie_info_watch.csv",
+                        vectorstore_dir="../data/chroma",
                     )
                 ],
                 system_template=RECOMMEND_MOVIE_AGENT,
@@ -52,3 +59,10 @@ class ConversationLangGraph:
             -1
         ].content
         return grapn_response
+
+
+if __name__ == "__main__":
+    aa = ConversationLangGraph()
+    bb = aa.get_graph()
+    print(aa)
+    print(bb)
