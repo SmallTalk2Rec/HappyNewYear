@@ -41,44 +41,44 @@ async def index():
 
 @chat_router.post("/callback")
 async def handle_callback(request: Request):
+    # try:
+    data = await request.json()
+    print(data)
+    user_id = data.get("userRequest")["user"]["id"]  # 사용자의 고유 키
+    message = data.get("userRequest")["utterance"]  # 사용자가 보낸 메시지
+    if user_id not in my_app.user_conversations:
+        # 할당된 chain이 없으면 생성 후 할당
+        my_app.user_conversations[user_id] = ConversationLangGraph()
+    # 사전에 할당해 놓은 chain 불러와서 사용
+    graph = my_app.user_conversations[user_id].get_graph()
+    print("graph 객체 할당 완료")
+
+    # graph 결과 받아오기
+    bot_response = graph.run(message)
+    print("graph 객체 할당 완료")
+
+    # response 형태 수정
+    response = APIResponse(
+        version="2.0",
+        template={"outputs": [{"simpleText": {"text": bot_response}}]},
+    )
+
+    # 이미 스케줄러에 등록되어 있으면 삭제 후에 작업 등록
     try:
-        data = await request.json()
-        print(data)
-        user_id = data.get("userRequest")["user"]["id"]  # 사용자의 고유 키
-        message = data.get("userRequest")["utterance"]  # 사용자가 보낸 메시지
-        if user_id not in my_app.user_conversations:
-            # 할당된 chain이 없으면 생성 후 할당
-            my_app.user_conversations[user_id] = ConversationLangGraph()
-        # 사전에 할당해 놓은 chain 불러와서 사용
-        graph = my_app.user_conversations[user_id].get_graph()
-        print("graph 객체 할당 완료")
+        job = my_app.scheduler.get_job(user_id)
+        job.remove()
+    except Exception:
+        pass
 
-        # graph 결과 받아오기
-        bot_response = graph.run(message)
-        print("graph 객체 할당 완료")
+    my_app.scheduler.add_job(
+        delete_chat_history,
+        "date",
+        run_date=datetime.datetime.now(KR_TIMEZONE) + datetime.timedelta(hours=1),
+        id=user_id,
+        args=[user_id, my_app.user_conversations],
+    )
 
-        # response 형태 수정
-        response = APIResponse(
-            version="2.0",
-            template={"outputs": [{"simpleText": {"text": bot_response}}]},
-        )
+    return response
 
-        # 이미 스케줄러에 등록되어 있으면 삭제 후에 작업 등록
-        try:
-            job = my_app.scheduler.get_job(user_id)
-            job.remove()
-        except Exception:
-            pass
-
-        my_app.scheduler.add_job(
-            delete_chat_history,
-            "date",
-            run_date=datetime.datetime.now(KR_TIMEZONE) + datetime.timedelta(hours=1),
-            id=user_id,
-            args=[user_id, my_app.user_conversations],
-        )
-
-        return response
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
