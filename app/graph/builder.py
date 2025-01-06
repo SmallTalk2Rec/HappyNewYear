@@ -28,8 +28,8 @@ class ConversationLangGraph:
                 llm=self.llm,
                 tools=[
                     MovieRetrieverTool(
-                        movie_data_path="/smalktalk2rec/FastAPI/data/241210/movie_info_watch.csv",
-                        vectorstore_dir="/smalktalk2rec/FastAPI/data/chroma",
+                        uri_path="sqlite:///data/movie_info_watch_sql.db",
+                        data_path="/smalktalk2rec/FastAPI/data/241228/movie_info_watch.csv",
                     )
                 ],
                 system_template=RECOMMEND_MOVIE_AGENT,
