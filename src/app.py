@@ -76,7 +76,10 @@ if st.session_state.messages[-1]["role"] != "ai":
     with st.chat_message("ai"):
         with st.spinner("Thinking..."):
             # response = generate_llama2_response(prompt)
-            response = graph.invoke({"messages": st.session_state.messages}, config={"configurable": {"max_execute_tool": 3}})["messages"][-1].content
+            response = graph.invoke(
+                {"user_id": "0", "messages": st.session_state.messages},
+                config={"configurable": {"max_execute_tool": 3}},
+            )["messages"][-1].content
 
             placeholder = st.empty()
             placeholder.markdown(response)
