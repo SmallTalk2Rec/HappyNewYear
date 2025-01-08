@@ -46,9 +46,9 @@ class ConversationLangGraph:
         """Return the compiled graph instance."""
         return self.graph
 
-    def run(self, message):
+    def run(self, message,user_id):
         """Run the graph with user message"""
-        grapn_response = self.graph.invoke({"messages": str(message)})["messages"][
+        grapn_response = self.graph.invoke({"messages": str(message),"user_id":str(user_id)})["messages"][
             -1
         ].content
         return grapn_response
