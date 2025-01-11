@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
-from graph.node import SupervisorNode, RecommendMovieNode
+from graph.node import SupervisorNode, RecommendMovieNode, ExecuteToolNode
 from graph.prompt import SUPERVISOR_AGENT, RECOMMEND_MOVIE_AGENT
 
 load_dotenv()
@@ -16,6 +16,13 @@ class ConversationLangGraph:
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         self.workflow = StateGraph(GraphState)
 
+        self.tools = [
+            MovieRetrieverTool(
+                uri_path="sqlite:///data/movie_info_watch_sql.db",
+                data_path="/smalktalk2rec/FastAPI/data/241228/movie_info_watch.csv",
+            )
+        ]
+
         # Define the nodes
         self.workflow.add_node(
             "supervisor_node",
@@ -26,15 +33,12 @@ class ConversationLangGraph:
             "recommend_movie_node",
             RecommendMovieNode(
                 llm=self.llm,
-                tools=[
-                    MovieRetrieverTool(
-                        uri_path="sqlite:///data/movie_info_watch_sql.db",
-                        data_path="/smalktalk2rec/FastAPI/data/241228/movie_info_watch.csv",
-                    )
-                ],
+                tools=self.tools,
                 system_template=RECOMMEND_MOVIE_AGENT,
             ),
         )
+
+        self.workflow.add_node("execute_tool", ExecuteToolNode(tools=self.tools))
 
         # Define edges
         self.workflow.add_edge(START, "supervisor_node")
@@ -46,9 +50,9 @@ class ConversationLangGraph:
         """Return the compiled graph instance."""
         return self.graph
 
-    def run(self, message,user_id):
+    def run(self, message, user_id):
         """Run the graph with user message"""
-        grapn_response = self.graph.invoke({"messages": str(message),"user_id":str(user_id)})["messages"][
-            -1
-        ].content
+        grapn_response = self.graph.invoke(
+            {"messages": str(message), "user_id": str(user_id)}
+        )["messages"][-1].content
         return grapn_response
