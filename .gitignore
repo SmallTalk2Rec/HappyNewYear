@@ -7,3 +7,4 @@ notebooks/
 chroma_/
 *.db
 __pycache__/
+data/
