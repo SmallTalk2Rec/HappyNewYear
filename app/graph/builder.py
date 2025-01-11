@@ -53,6 +53,7 @@ class ConversationLangGraph:
     def run(self, message, user_id):
         """Run the graph with user message"""
         grapn_response = self.graph.invoke(
-            {"messages": str(message), "user_id": str(user_id)}
+            {"messages": str(message), "user_id": str(user_id)},
+            config={"configurable": {"max_execute_tool": 3}},
         )["messages"][-1].content
         return grapn_response

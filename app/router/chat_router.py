@@ -50,11 +50,10 @@ async def handle_callback(request: Request):
         # 할당된 chain이 없으면 생성 후 할당
         my_app.user_conversations[user_id] = ConversationLangGraph()
     # 사전에 할당해 놓은 chain 불러와서 사용
-    graph = my_app.user_conversations[user_id].get_graph()
     print("graph 객체 할당 완료")
 
     # graph 결과 받아오기
-    bot_response = my_app.user_conversations[user_id].run(message)
+    bot_response = my_app.user_conversations[user_id].run(message, user_id)
     print("graph 객체 할당 완료")
 
     # response 형태 수정
