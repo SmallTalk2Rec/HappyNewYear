@@ -31,6 +31,7 @@ class SupervisorNode:
         response = self.llm.invoke(messages)
 
         if response.target == "RecommendMovieAgent":
+            print("RecommenMovieAgent activate!!")
             return Command(
                 update={
                     "inter_messages": [
@@ -43,6 +44,8 @@ class SupervisorNode:
                 goto="recommend_movie_node",
             )
         elif response.target == "user":
+            print("User activate!!")
+
             return Command(
                 update={
                     "messages": [{"role": "assistant", "content": response.message}]
@@ -103,6 +106,9 @@ class ExecuteToolNode:
         outputs = []
 
         for tool_call in state.inter_messages[-1].tool_calls:
+            print(self.tools_by_name, "excute tool node call logs")
+            print(self.tools_by_name[tool_call["name"]])
+            print(tool_call)
             tool_result = self.tools_by_name[tool_call["name"]].invoke(
                 tool_call["args"]
             )

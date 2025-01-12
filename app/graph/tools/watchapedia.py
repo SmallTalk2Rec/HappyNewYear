@@ -67,6 +67,7 @@ class MovieRetrieverTool(BaseTool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ):
         response = self.sql_retriever.invoke({"query": sql_query})
+        print(response)
         movie_ids = [item[0] for item in ast.literal_eval(response)]
         semantic_query = "" if semantic_query is None else semantic_query
         items = search_movies(self.chroma, movie_ids, semantic_query)
