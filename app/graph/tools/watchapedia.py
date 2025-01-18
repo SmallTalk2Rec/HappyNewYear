@@ -67,7 +67,6 @@ class MovieRetrieverTool(BaseTool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ):
         response = self.sql_retriever.invoke({"query": sql_query})
-        print("sql_query result: ", response)
         if response == "":
             return "[]"
         else:

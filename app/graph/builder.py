@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START
+from langfuse.callback import CallbackHandler
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
@@ -14,6 +16,7 @@ class ConversationLangGraph:
     def __init__(self):
         """Initialize the ConversationLangGraph object."""
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        memory = MemorySaver()
         self.workflow = StateGraph(GraphState)
 
         self.tools = [
@@ -44,7 +47,7 @@ class ConversationLangGraph:
         self.workflow.add_edge(START, "supervisor_node")
 
         # Compile the workflow
-        self.graph = self.workflow.compile()
+        self.graph = self.workflow.compile(checkpointer=memory)
 
     def get_graph(self):
         """Return the compiled graph instance."""
@@ -52,8 +55,18 @@ class ConversationLangGraph:
 
     def run(self, message, user_id):
         """Run the graph with user message"""
+        lanfuse_handler = CallbackHandler(
+            user_id=user_id,
+        )
+        config = {
+            "configurable": {
+                "thread_id": user_id,
+                "max_execute_tool": 3
+            },
+            "callbacks": [lanfuse_handler]
+        }
         grapn_response = self.graph.invoke(
             {"messages": message, "user_id": str(user_id)},
-            config={"configurable": {"max_execute_tool": 3}},
+            config=config,
         )["messages"][-1].content
         return grapn_response

@@ -12,9 +12,6 @@ from graph.builder import ConversationLangGraph
 from utils.chat_history import delete_chat_history
 
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "smalltalk2rec"
-
 KR_TIMEZONE = pytz.timezone("Asia/Seoul")
 
 
