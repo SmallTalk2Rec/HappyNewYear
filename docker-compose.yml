@@ -1,0 +1,63 @@
+version: '3.8'
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name : fastapi
+    # command: sleep infinity
+    command: python app/main.py
+    volumes:
+      - .:/smalktalk2rec/FastAPI
+    env_file: 
+      - .env
+    ports:
+      - 8080:8080
+    restart: always
+
+  langfuse-server:
+    image: langfuse/langfuse:2
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+      NEXTAUTH_SECRET: mysecret
+      SALT: mysalt  
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      NEXTAUTH_URL: http://localhost:3000
+      TELEMETRY_ENABLED: "true"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      LANGFUSE_INIT_ORG_ID: "1"
+      LANGFUSE_INIT_ORG_NAME: "happynewyear"
+      LANGFUSE_INIT_PROJECT_ID: "1"
+      LANGFUSE_INIT_PROJECT_NAME: "happynewyear"
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: "pk-lf-301d3431-b916-4429-8d30-a0cc639f01a6"
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: "sk-lf-2b2f1d19-a16b-446d-b1b6-83b1676983a0"
+      LANGFUSE_INIT_USER_EMAIL: "happy@happy.com"
+      LANGFUSE_INIT_USER_NAME: "happy" 
+      LANGFUSE_INIT_USER_PASSWORD: "happynewyear"
+
+  db:
+    image: postgres
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+
+volumes:
+ postgresql_data:
+   name: postgresql_data
+   external: true

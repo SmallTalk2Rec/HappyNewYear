@@ -4,12 +4,18 @@ from langgraph.graph import StateGraph, START
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
-from graph.node import SupervisorNode, RecommendMovieNode
+from graph.node import SupervisorNode, RecommendMovieNode, ExecuteToolNode
 from graph.prompt import SUPERVISOR_AGENT, RECOMMEND_MOVIE_AGENT
 
 load_dotenv()
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+tools=[
+    MovieRetrieverTool(
+        uri_path="sqlite:///data/movie_info_watch_sql.db", 
+        data_path="./data/241228/movie_info_watch.csv"
+    )
+]
 
 
 workflow = StateGraph(GraphState)
@@ -27,13 +33,15 @@ workflow.add_node(
     "recommend_movie_node", 
     RecommendMovieNode(
         llm=llm, 
-        tools=[
-            MovieRetrieverTool(
-                movie_data_path="./data/241210/movie_info_watch.csv", 
-                vectorstore_dir="./data/chroma"
-            )
-        ],
+        tools=tools,
         system_template=RECOMMEND_MOVIE_AGENT
+    )
+)
+
+workflow.add_node(
+    "execute_tool",
+    ExecuteToolNode(
+        tools=tools
     )
 )
 

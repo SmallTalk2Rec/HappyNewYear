@@ -5,3 +5,6 @@ chroma/
 notebooks/
 *.csv
 chroma_/
+*.db
+__pycache__/
+data/
