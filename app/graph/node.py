@@ -25,7 +25,7 @@ class SupervisorNode:
         agent_results = "\n\n".join(state.agent_results)
         human_message = {
             "role": "human",
-            "content": f"<user>\n{state.messages[-1].content}\n<user>\n\n{agent_results}",
+            "content": f"<user>\n{state.messages[-1].content}\n</user>\n\n{agent_results}",
         }
         messages = [self.system_message] + state.messages[:-1] + [human_message]
         response = self.llm.invoke(messages)
@@ -36,7 +36,7 @@ class SupervisorNode:
                     "inter_messages": [
                         {
                             "role": "human",
-                            "content": f"{agent_results}\n\n<user>\n{response.message}\n<user>",
+                            "content": f"{agent_results}\n\n<user>\n{response.message}\n</user>",
                         }
                     ]
                 },
@@ -87,7 +87,7 @@ class RecommendMovieNode:
             return Command(
                 update={
                     "agent_results": [
-                        f"<RecommendMovieAgent>\n{result.content}\n<RecommendMovieAgent>"
+                        f"<RecommendMovieAgent>\n{result.content}\n</RecommendMovieAgent>"
                     ],
                     "execute_tool_count": 0,
                 },

@@ -17,7 +17,6 @@ class GraphState:
     agent_results: Annotated[list, operator.add] = field(default_factory=list)
     inter_messages: List[AnyMessage] = field(default_factory=list)
     execute_tool_count: int = field(default=0)
-    user_id: str = field(default="")
 
 
 @dataclass

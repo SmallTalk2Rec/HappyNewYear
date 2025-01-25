@@ -1,6 +1,8 @@
+import os
 from dotenv import load_dotenv
+from psycopg_pool import ConnectionPool
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import StateGraph, START
 from langfuse.callback import CallbackHandler
 
@@ -16,13 +18,23 @@ class ConversationLangGraph:
     def __init__(self):
         """Initialize the ConversationLangGraph object."""
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        memory = MemorySaver()
+        checkpointer = PostgresSaver(
+            ConnectionPool(
+                conninfo=os.environ["POSTGRES_CHECKPOINT_URI"],
+                max_size=10,
+                kwargs={
+                    "autocommit": True,
+                    "prepare_threshold": 0,
+                }
+            )
+        )
+        checkpointer.setup()
         self.workflow = StateGraph(GraphState)
 
         self.tools = [
             MovieRetrieverTool(
                 uri_path="sqlite:///data/movie_info_watch_sql.db",
-                data_path="/smalktalk2rec/FastAPI/data/241228/movie_info_watch.csv",
+                data_path="./data/241228/movie_info_watch.csv",
             )
         ]
 
@@ -47,7 +59,7 @@ class ConversationLangGraph:
         self.workflow.add_edge(START, "supervisor_node")
 
         # Compile the workflow
-        self.graph = self.workflow.compile(checkpointer=memory)
+        self.graph = self.workflow.compile(checkpointer=checkpointer)
 
     def get_graph(self):
         """Return the compiled graph instance."""
@@ -66,7 +78,7 @@ class ConversationLangGraph:
             "callbacks": [lanfuse_handler]
         }
         grapn_response = self.graph.invoke(
-            {"messages": message, "user_id": str(user_id)},
+            {"messages": message},
             config=config,
         )["messages"][-1].content
         return grapn_response

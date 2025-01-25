@@ -5,8 +5,7 @@ description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 packages = [
-    { include = "src" },
-    { include = "graph", from = "src" }
+    { include = "graph", from = "app" }
 ]
 
 [tool.poetry.dependencies]
@@ -19,6 +18,11 @@ langchain-chroma = "^0.1.4"
 langchain = "^0.3.13"
 langchain-community = "^0.3.13"
 lark = "^1.2.2"
+docx2txt = "^0.8"
+langfuse = "^2.57.12"
+psycopg = "^3.2.4"
+psycopg-pool = "^3.2.4"
+langgraph-checkpoint-postgres = "^2.0.13"
 
 
 [tool.poetry.group.dev.dependencies]

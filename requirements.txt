@@ -18,3 +18,7 @@ httpx
 requests
 python-dotenv
 lark
+psycopg
+psycopg-pool
+langgraph-checkpoint-postgres
+psycopg[binary]
