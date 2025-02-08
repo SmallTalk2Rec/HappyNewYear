@@ -8,7 +8,7 @@ from langfuse.callback import CallbackHandler
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
-from graph.node import SupervisorNode, RecommendMovieNode, ExecuteToolNode
+from graph.nodes import SupervisorNode, RecommendMovieNode, ExecuteToolNode
 from graph.prompt import SUPERVISOR_AGENT, RECOMMEND_MOVIE_AGENT
 
 load_dotenv()
