@@ -9,7 +9,6 @@ from langfuse.callback import CallbackHandler
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
 from graph.nodes import SupervisorNode, RecommendMovieNode, ExecuteToolNode
-from graph.prompt import SUPERVISOR_AGENT, RECOMMEND_MOVIE_AGENT
 
 load_dotenv()
 
@@ -41,15 +40,14 @@ class ConversationLangGraph:
         # Define the nodes
         self.workflow.add_node(
             "supervisor_node",
-            SupervisorNode(llm=self.llm, system_template=SUPERVISOR_AGENT),
+            SupervisorNode(llm=self.llm),
         )
 
         self.workflow.add_node(
             "recommend_movie_node",
             RecommendMovieNode(
                 llm=self.llm,
-                tools=self.tools,
-                system_template=RECOMMEND_MOVIE_AGENT,
+                tools=self.tools
             ),
         )
 

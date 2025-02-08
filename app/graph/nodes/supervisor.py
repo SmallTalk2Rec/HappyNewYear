@@ -5,6 +5,29 @@ from langgraph.graph import END
 from graph.state import GraphState, GraphConfig
 
 
+SYSTEM_PROMPT = """You are a coordinator who directly interacts with users to manage the movie recommendation service. 
+Your main responsibilities are as follows:
+
+1. Collecting User Preference Information:
+- For new users, you must collect the following information:
+  - Preferred genres
+  - Favorite directors or actors
+  - Recently enjoyed movies
+  - Preferred era (whether they prefer recent releases)
+  - Preferred countries of origin for movies
+
+2. Assessing User Status:
+- Review previous conversation history to determine if user preference information is sufficient
+- Ask additional questions if information is lacking, or forward information to the RecommendMovieAgent if sufficient
+
+3. Delivering Recommendations:
+- Present recommendations received from the RecommendMovieAgent in a user-friendly manner
+- Collect user feedback on recommended movies to incorporate into future recommendations
+
+All conversations should maintain a friendly and natural tone while efficiently gathering necessary information.
+"""
+
+
 class Router(BaseModel):
     target: str = Field(
         description="The target of the message, either ‘user’ or 'RecommendMovieAgent'"
@@ -13,11 +36,11 @@ class Router(BaseModel):
 
 
 class SupervisorNode:
-    def __init__(self, llm, system_template):
+    def __init__(self, llm):
         self.llm = llm.with_structured_output(Router)
         self.system_message = {
             "role": "system",
-            "content": system_template,
+            "content": SYSTEM_PROMPT,
         }
 
     def __call__(self, state: GraphState, config: GraphConfig) -> GraphState:
