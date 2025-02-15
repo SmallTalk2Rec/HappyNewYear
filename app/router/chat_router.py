@@ -60,15 +60,37 @@ async def handle_callback(request: Request):
         #         "content": "안녕하세요 영화 추천 챗봇입니다. 무엇을 도와 드릴까요?",
         #     }
         # ]
+        my_app.redis.set(user_id, 50)
     # 사전에 할당해 놓은 chain 불러와서 사용
     print("graph 객체 할당 완료")
 
     my_app.user_conversations[user_id]["message"] = message
 
+    chat_count = my_app.redis.get(user_id)
+
+    if chat_count <= 0:
+        del my_app.user_conversations[user_id]
+        response = APIResponse(
+            version="2.0",
+            template={
+                "outputs": [
+                    {
+                        "simpleText": {
+                            "text": "보유하신 토큰을 다 사용하셨습니다. 나중에 다시 이용해보세요"
+                        }
+                    }
+                ]
+            },
+        )
+
+        return response
+
     # graph 결과 받아오기
     bot_response = my_app.user_conversations[user_id]["langgraph"].run(
         my_app.user_conversations[user_id]["message"], user_id
     )
+    my_app.redis.set(user_id, chat_count - 1)
+
     print("graph 객체 할당 완료")
 
     # response 형태 수정

@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
+from redis
 
+def reset_redis(redis):
+    redis.flushall()
 
 class FastAPIApp:
     def __init__(self):
@@ -26,6 +29,9 @@ class FastAPIApp:
             "expires_in": 0,  # 만료 시간 (초 단위)
         }
 
+        self.redis = redis.Redis(host="redis", port=6379, decode_responses=True)
+
+
         # 스케줄러 객체 생성
         self.scheduler = BackgroundScheduler(timezone="Asia/Seoul")
         self.scheduler.start()
@@ -37,6 +43,7 @@ class FastAPIApp:
         # self.scheduler.add_job(
         #     select_sheet, "cron", hour=0, minute=0, args=[self], id="create new sheet"
         # )
+        self.scheduler.add_job(reset_redis, 'cron', hour=9, minute=0,kwargs={"redis": self.redis})
         print("start!!!!!!!!!!!")
 
     def include_router(self, router):
