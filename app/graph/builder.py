@@ -8,18 +8,18 @@ from langfuse.callback import CallbackHandler
 
 from graph.tools import MovieRetrieverTool
 from graph.state import GraphState
-from graph.nodes import SupervisorNode, RecommendMovieNode, ExecuteToolNode
+from graph.nodes import SupervisorNode, RecommendMovieNode, ExecuteToolNode, UserProfilingNode
 
 load_dotenv()
 
 
 class ConversationLangGraph:
-    def __init__(self):
+    def __init__(self, postgres_uri=os.environ["POSTGRES_CHECKPOINT_URI"], langfuse_host=os.environ["LANGFUSE_HOST"]):
         """Initialize the ConversationLangGraph object."""
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         checkpointer = PostgresSaver(
             ConnectionPool(
-                conninfo=os.environ["POSTGRES_CHECKPOINT_URI"],
+                conninfo=postgres_uri,
                 max_size=10,
                 kwargs={
                     "autocommit": True,
@@ -42,7 +42,6 @@ class ConversationLangGraph:
             "supervisor_node",
             SupervisorNode(llm=self.llm),
         )
-
         self.workflow.add_node(
             "recommend_movie_node",
             RecommendMovieNode(
@@ -50,23 +49,25 @@ class ConversationLangGraph:
                 tools=self.tools
             ),
         )
-
         self.workflow.add_node("execute_tool", ExecuteToolNode(tools=self.tools))
+        self.workflow.add_node("user_profiling_node", UserProfilingNode(llm=self.llm))
 
         # Define edges
         self.workflow.add_edge(START, "supervisor_node")
 
         # Compile the workflow
         self.graph = self.workflow.compile(checkpointer=checkpointer)
+        self.langfuse_host = langfuse_host
 
     def get_graph(self):
         """Return the compiled graph instance."""
         return self.graph
 
-    def run(self, message, user_id):
+    def run(self, messages, user_id):
         """Run the graph with user message"""
         lanfuse_handler = CallbackHandler(
             user_id=user_id,
+            host=self.langfuse_host,
         )
         config = {
             "configurable": {
@@ -76,7 +77,7 @@ class ConversationLangGraph:
             "callbacks": [lanfuse_handler]
         }
         grapn_response = self.graph.invoke(
-            {"messages": message},
+            {"messages": messages},
             config=config,
-        )["messages"][-1].content
+        )["messages"][-1]["content"]
         return grapn_response

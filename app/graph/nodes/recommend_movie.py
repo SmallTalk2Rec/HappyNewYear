@@ -55,9 +55,10 @@ class RecommendMovieNode:
             if state.execute_tool_count >= config["configurable"]["max_execute_tool"]:
                 return Command(
                     update={
-                        "agent_results": [
+                        "agent_results": state.agent_results + [
                             f"Tool execution limit reached. Please try again later."
                         ],
+                        "inter_messages": [],
                         "execute_tool_count": 0,
                     },
                     goto="supervisor_node",
@@ -72,9 +73,10 @@ class RecommendMovieNode:
         else:
             return Command(
                 update={
-                    "agent_results": [
+                    "agent_results": state.agent_results + [
                         f"<RecommendMovieAgent>\n{result.content}\n</RecommendMovieAgent>"
                     ],
+                    "inter_messages": [],
                     "execute_tool_count": 0,
                 },
                 goto="supervisor_node",
