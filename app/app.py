@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.background import BackgroundScheduler
+from graph.builder import ConversationLangGraph
 
 
 class FastAPIApp:
@@ -17,7 +17,7 @@ class FastAPIApp:
             allow_headers=["*"],
         )
         # 유저 id 및 이전 발화를 저장할 dictionary 생성
-        self.user_conversations = {}
+        self.graph = ConversationLangGraph()
 
         # 카카오톡 access, refresh 토큰 저장을 위한 dictionary 생성
         self.token_info = {
@@ -25,10 +25,6 @@ class FastAPIApp:
             "refresh_token": "YOUR_REFRESH_TOKEN",  # 최초에 수동으로 발급한 Refresh Token
             "expires_in": 0,  # 만료 시간 (초 단위)
         }
-
-        # 스케줄러 객체 생성
-        self.scheduler = BackgroundScheduler(timezone="Asia/Seoul")
-        self.scheduler.start()
 
         self.setup_events()
 

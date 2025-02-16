@@ -1,15 +1,29 @@
 version: '3.8'
 services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit
+    command: streamlit run --server.port 80 --server.address 0.0.0.0 app/streamlit.py
+    volumes:
+      - .:/smalktalk2rec/Streamlit
+    env_file:
+      - .env
+    ports:
+      - 80:80
+    restart: always
+
   fastapi:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name : fastapi
+    container_name: fastapi
     # command: sleep infinity
     command: python app/main.py
     volumes:
       - .:/smalktalk2rec/FastAPI
-    env_file: 
+    env_file:
       - .env
     ports:
       - 8080:8080
@@ -17,6 +31,7 @@ services:
 
   langfuse-server:
     image: langfuse/langfuse:2
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -25,7 +40,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
       NEXTAUTH_SECRET: mysecret
-      SALT: mysalt  
+      SALT: mysalt
       ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
       NEXTAUTH_URL: http://localhost:3000
       TELEMETRY_ENABLED: "true"
@@ -37,14 +52,14 @@ services:
       LANGFUSE_INIT_PROJECT_PUBLIC_KEY: "pk-lf-301d3431-b916-4429-8d30-a0cc639f01a6"
       LANGFUSE_INIT_PROJECT_SECRET_KEY: "sk-lf-2b2f1d19-a16b-446d-b1b6-83b1676983a0"
       LANGFUSE_INIT_USER_EMAIL: "happy@happy.com"
-      LANGFUSE_INIT_USER_NAME: "happy" 
+      LANGFUSE_INIT_USER_NAME: "happy"
       LANGFUSE_INIT_USER_PASSWORD: "happynewyear"
 
   db:
     image: postgres
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 3s
       timeout: 3s
       retries: 10
@@ -56,8 +71,9 @@ services:
       - 5432:5432
     volumes:
       - postgresql_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
 
 volumes:
- postgresql_data:
-   name: postgresql_data
-   external: true
+  postgresql_data:
+    name: postgresql_data
+    external: true

@@ -1,26 +1,9 @@
-SUPERVISOR_AGENT = """You are a coordinator who directly interacts with users to manage the movie recommendation service. 
-Your main responsibilities are as follows:
+from langgraph.types import Command
 
-1. Collecting User Preference Information:
-- For new users, you must collect the following information:
-  - Preferred genres
-  - Favorite directors or actors
-  - Recently enjoyed movies
-  - Preferred era (whether they prefer recent releases)
-  - Preferred countries of origin for movies
+from graph.state import GraphState, GraphConfig
 
-2. Assessing User Status:
-- Review previous conversation history to determine if user preference information is sufficient
-- Ask additional questions if information is lacking, or forward information to the RecommendMovieAgent if sufficient
 
-3. Delivering Recommendations:
-- Present recommendations received from the RecommendMovieAgent in a user-friendly manner
-- Collect user feedback on recommended movies to incorporate into future recommendations
-
-All conversations should maintain a friendly and natural tone while efficiently gathering necessary information.
-"""
-
-RECOMMEND_MOVIE_AGENT = """You are a movie recommendation expert who finds the best movies based on user preferences.
+SYSTEM_PROMPT = """You are a movie recommendation expert who finds the best movies based on user preferences.
 
 Your tasks:
 1. Extract user preferences about movies from user requests.
@@ -54,3 +37,47 @@ Special notes:
 - Missing values are marked as '-' or NULL
 - Cast info format: [('감독명', '감독'), ('배우명', '주연 | 역할')]
 """
+
+
+class RecommendMovieNode:
+    def __init__(self, llm, tools):
+        self.llm_with_tools = llm.bind_tools(tools)
+        self.system_message = {
+            "role": "system",
+            "content": SYSTEM_PROMPT,
+        }
+
+    def __call__(self, state: GraphState, config: GraphConfig) -> GraphState:
+        messages = [self.system_message] + state.inter_messages
+        result = self.llm_with_tools.invoke(messages)
+
+        if result.tool_calls:
+            if state.execute_tool_count >= config["configurable"]["max_execute_tool"]:
+                return Command(
+                    update={
+                        "agent_results": state.agent_results + [
+                            f"Tool execution limit reached. Please try again later."
+                        ],
+                        "inter_messages": [],
+                        "execute_tool_count": 0,
+                    },
+                    goto="supervisor_node",
+                )
+            else:
+                return Command(
+                    update={
+                        "inter_messages": state.inter_messages + [result],
+                    },
+                    goto="execute_tool",
+                )
+        else:
+            return Command(
+                update={
+                    "agent_results": state.agent_results + [
+                        f"<RecommendMovieAgent>\n{result.content}\n</RecommendMovieAgent>"
+                    ],
+                    "inter_messages": [],
+                    "execute_tool_count": 0,
+                },
+                goto="supervisor_node",
+            )

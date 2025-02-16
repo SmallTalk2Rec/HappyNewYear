@@ -1,0 +1,15 @@
+FROM python:3.10-slim
+
+WORKDIR /smalktalk2rec/Streamlit
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install streamlit==1.29.0
+RUN pip install python-dotenv==1.0.0
+RUN pip install requests==2.31.0
