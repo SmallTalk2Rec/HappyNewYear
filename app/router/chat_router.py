@@ -75,11 +75,13 @@ async def handle_callback(test_message: Test_Message):
     message = str(data["message"])  # 사용자가 보낸 메시지
 
     bot_response = my_app.graph.run(
-        {
-            "role": "user",
-            "content": message,
-        },
-        user_id,
+        messages=[
+            {
+                "role": "user",
+                "content": message,
+            },
+        ],
+        user_id=user_id,
     )
 
     # response 형태 수정

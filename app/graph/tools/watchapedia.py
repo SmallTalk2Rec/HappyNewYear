@@ -110,6 +110,7 @@ def preprocess_data(contexts_df):
             else:
                 contexts_df[col] = contexts_df[col].fillna("")
 
+    contexts_df.columns = contexts_df.columns.str.replace(r'\([^)]*\)', '', regex=True)
     return contexts_df
 
 
